@@ -95,6 +95,7 @@ The tool supports multiple strategies for selecting the best card offer:
 - **cheapest** (default): Selects the lowest price regardless of condition or foil status
 - **cheapest-nonfoil**: Selects the cheapest non-foil version
 - **cheapest-foil**: Selects the cheapest foil version
+- **foil-first-cheapest**: Prefers foil cards - selects the cheapest foil if available, otherwise falls back to the cheapest non-foil
 - **best-condition**: Selects the cheapest Near Mint condition card
 - **blingiest**: Selects the most expensive foil card (for "bling" factor)
 
@@ -261,7 +262,8 @@ The tool supports multiple strategies for selecting the best offer from availabl
 
 - **CheapestStrategy**: Select the lowest price regardless of condition or foil status
 - **CheapestFoilStrategy**: Select the cheapest foil version
-- **CheapestNonFoilStrategy**: Select the cheapest non-foil version  
+- **CheapestNonFoilStrategy**: Select the cheapest non-foil version
+- **FoilFirstCheapestStrategy**: Prefer foil cards - select the cheapest foil if available, otherwise the cheapest non-foil
 - **BestConditionStrategy**: Select the cheapest Near Mint condition card
 - **BlingiestStrategy**: Select the most expensive foil card
 

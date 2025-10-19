@@ -3,7 +3,7 @@ Selection strategies for choosing the best card offer.
 
 This module provides different strategies for selecting the best card offer
 from a list of available offers. Strategies include cheapest, cheapest foil,
-cheapest non-foil, blingiest (most expensive foil), etc.
+cheapest non-foil, foil-first-cheapest, blingiest (most expensive foil), etc.
 """
 
 from abc import ABC, abstractmethod
