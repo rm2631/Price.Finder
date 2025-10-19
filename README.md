@@ -7,6 +7,7 @@ You provide a simple text list of cards you need, and the tool searches each sto
 ## 🚀 Features
 
 - **Scrapes multiple Canadian MTG stores** for card prices (FaceToFaceGames and TopDeckHero)
+- **Proxy card support** — optionally include proxy cards at $0.45 each as an alternative option
 - **Automatic caching** — search results are cached for 24 hours to improve performance
 - **Multi-page support** — scrapes up to 2 pages of results per store for better coverage
 - **Modular architecture** — add new stores easily
@@ -58,6 +59,8 @@ Options:
   --strategy, -s STRATEGY Selection strategy for choosing best card (default: cheapest)
   --min-quality, -q QUAL  Minimum card quality/condition to consider (e.g., nm, lp, mp)
   --topdeckhero-discount  Apply TopDeckHero's 20% checkout discount to prices
+  --proxy-all             Enable proxy cards for all cards (foil and non-foil) at $0.45 each
+  --proxy-nonfoil         Enable proxy cards for non-foil cards only at $0.45 each
   --no-cache              Disable caching of search results
   --debug                 Enable debug logging
 ```
@@ -124,6 +127,36 @@ When this flag is enabled, all TopDeckHero prices will be reduced by 20% before 
 - With discount: TopDeckHero price is $8.00 (20% off)
 
 This makes it easier to compare TopDeckHero prices with other stores that don't offer a checkout discount.
+
+### Proxy Cards
+
+You can enable proxy cards as a price option using the `--proxy-all` or `--proxy-nonfoil` flags. Proxy cards are always priced at **$0.45 each** and will be included in the comparison after searching all real stores.
+
+```bash
+# Enable proxies for all cards (foil and non-foil)
+python -m mtg_deal_finder cards.txt --proxy-all
+
+# Enable proxies for non-foil cards only
+python -m mtg_deal_finder cards.txt --proxy-nonfoil
+```
+
+When proxy options are enabled:
+- The tool will add proxy offers to the comparison after searching real stores
+- The selection strategy will pick the proxy if it's the cheapest option
+- With `--proxy-all`, both foil and non-foil proxy options are available
+- With `--proxy-nonfoil`, only non-foil proxy options are available
+- Proxy cards always pass quality filters (they're not affected by `--min-quality`)
+
+**Example:**
+```bash
+# Find the cheapest option, considering proxies for non-foil cards
+python -m mtg_deal_finder cards.txt --proxy-nonfoil --strategy cheapest
+
+# Find the cheapest foil cards, with foil proxies as an option
+python -m mtg_deal_finder cards.txt --proxy-all --strategy cheapest-foil
+```
+
+**Note:** The two proxy options are mutually exclusive - you can use either `--proxy-all` or `--proxy-nonfoil`, but not both.
 
 ### Store Filtering
 
