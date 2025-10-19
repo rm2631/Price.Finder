@@ -63,7 +63,10 @@ class FaceToFaceScraper(StoreScraper):
         try:
             logger.info(f"Searching FaceToFaceGames for: {card.name}")
             
-            # Construct API URL (double URL encoding as the site expects)
+            # Construct API URL
+            # Note: The FaceToFaceGames API expects double URL encoding for the search query.
+            # This is because the API internally decodes the query twice - once at the web server level
+            # and once at the application level. Single encoding would result in incorrect search queries.
             search_query = quote_plus(quote_plus(card.name))
             api_url = f"{self.API_URL}/keyword/{search_query}/pageSize/50/page/1"
             
@@ -197,10 +200,12 @@ class FaceToFaceScraper(StoreScraper):
             True if the card is non-English, False otherwise
         """
         # Look for language markers in the title
+        # FaceToFaceGames formats non-English cards as: "Card Name - Language [Set]"
+        # Example: "Lightning Bolt - Japanese [123] [Set Name] [Foil]"
         language_markers = [
-            'french', 'japanese', 'german', 'spanish', 'italian',
-            'portuguese', 'russian', 'korean', 'chinese', 'simplified chinese',
-            'traditional chinese'
+            ' - french', ' - japanese', ' - german', ' - spanish', ' - italian',
+            ' - portuguese', ' - russian', ' - korean', ' - chinese', 
+            ' - simplified chinese', ' - traditional chinese'
         ]
         
         title_lower = title.lower()
@@ -220,17 +225,22 @@ class FaceToFaceScraper(StoreScraper):
         Returns:
             The set name or "Unknown"
         """
-        # Pattern: "Card Name [Set]" or just extract text in brackets
-        set_match = re.search(r'\[([^\]]+)\]', title)
-        if set_match:
-            # Get the second bracketed text (first is usually card number)
-            all_brackets = re.findall(r'\[([^\]]+)\]', title)
-            if len(all_brackets) >= 2:
-                return all_brackets[1]  # Second bracket is usually the set
-            elif len(all_brackets) == 1:
-                # Check if it looks like a set name (not just a number)
-                if not all_brackets[0].isdigit():
-                    return all_brackets[0]
+        # FaceToFaceGames format: "Card Name [Number] [Set Name] [Foil/Non-Foil]"
+        # Example: "Lightning Bolt [117] [Double Masters 2022] [Foil]"
+        
+        # Extract all text within brackets
+        all_brackets = re.findall(r'\[([^\]]+)\]', title)
+        
+        if len(all_brackets) >= 2:
+            # Second bracket is usually the set name
+            # First bracket is typically the card number
+            return all_brackets[1]
+        elif len(all_brackets) == 1:
+            # If only one bracket, check if it looks like a set name
+            # Set names are typically not purely numeric and not foil/non-foil indicators
+            bracket_content = all_brackets[0]
+            if bracket_content.lower() not in ['foil', 'non-foil'] and not bracket_content.isdigit():
+                return bracket_content
         
         return "Unknown"
     
