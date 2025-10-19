@@ -282,8 +282,6 @@ class FoilFirstCheapestStrategy(SelectionStrategy):
         non_foil_offers = [o for o in available_offers if not o.foil]
         if non_foil_offers:
             return min(non_foil_offers, key=lambda x: x.price)
-        
-        return None
     
     def get_name(self) -> str:
         return "Foil First, Cheapest"
