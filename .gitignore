@@ -54,3 +54,4 @@ htmlcov/
 *.tmp
 /tmp/
 *.xlsx
+=1.28.0
