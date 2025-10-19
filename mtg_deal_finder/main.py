@@ -12,8 +12,6 @@ from argparse import ArgumentParser
 from typing import List
 
 from mtg_deal_finder.cards import Card
-from mtg_deal_finder.compare import find_best_deals
-from mtg_deal_finder.output import export_to_excel, format_results_table
 
 
 # Configure logging
@@ -178,7 +176,7 @@ def main() -> None:
         logger.info("This tool helps you find the best prices for MTG cards")
         logger.info("across multiple Canadian online stores.")
         logger.info("")
-        logger.info("Usage: python mtg_deal_finder/main.py <input_file> [options]")
+        logger.info("Usage: python -m mtg_deal_finder <input_file> [options]")
         logger.info("")
         logger.info("Example input file (one card per line):")
         logger.info("  Lightning Bolt")
