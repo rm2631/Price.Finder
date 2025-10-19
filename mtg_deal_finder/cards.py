@@ -44,6 +44,8 @@ class Offer:
         condition: The card condition (e.g., "NM", "LP", "MP")
         price: The price in CAD
         url: The direct URL to the product page
+        foil: Whether the card is foil (default: False)
+        availability: Whether the card is in stock (default: True)
     """
     store: str
     card: str
@@ -51,6 +53,8 @@ class Offer:
     condition: str
     price: float
     url: str
+    foil: bool = False
+    availability: bool = True
     
     def __post_init__(self):
         """Validate offer data after initialization."""
