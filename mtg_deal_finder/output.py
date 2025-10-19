@@ -23,9 +23,10 @@ def create_dataframe(offers: List[Offer]) -> pd.DataFrame:
     """
     if not offers:
         # Return empty DataFrame with expected columns
-        return pd.DataFrame(columns=["Card", "Set", "Condition", "Foil", "Price", "Store", "URL"])
+        return pd.DataFrame(columns=["Query", "Card", "Set", "Condition", "Foil", "Price", "Store", "URL"])
     
     data = {
+        "Query": [offer.query for offer in offers],
         "Card": [offer.card for offer in offers],
         "Set": [offer.set for offer in offers],
         "Condition": [offer.condition for offer in offers],

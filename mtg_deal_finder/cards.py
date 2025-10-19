@@ -46,6 +46,7 @@ class Offer:
         url: The direct URL to the product page
         foil: Whether the card is foil (default: False)
         availability: Whether the card is in stock (default: True)
+        query: The original search query that generated this offer (default: "")
     """
     store: str
     card: str
@@ -55,6 +56,7 @@ class Offer:
     url: str
     foil: bool = False
     availability: bool = True
+    query: str = ""
     
     def __post_init__(self):
         """Validate offer data after initialization."""
