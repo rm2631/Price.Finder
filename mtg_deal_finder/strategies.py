@@ -3,7 +3,7 @@ Selection strategies for choosing the best card offer.
 
 This module provides different strategies for selecting the best card offer
 from a list of available offers. Strategies include cheapest, cheapest foil,
-cheapest non-foil, blingiest (most expensive foil), etc.
+cheapest non-foil, foil-first-cheapest, blingiest (most expensive foil), etc.
 """
 
 from abc import ABC, abstractmethod
@@ -244,6 +244,49 @@ class BestConditionStrategy(SelectionStrategy):
         return "Best Condition (Near Mint)"
 
 
+class FoilFirstCheapestStrategy(SelectionStrategy):
+    """
+    Strategy that prefers foil cards, selecting the cheapest foil if available,
+    otherwise falls back to the cheapest non-foil.
+    """
+    
+    def select(self, offers: List[Offer]) -> Optional[Offer]:
+        """
+        Select the cheapest foil offer if available, otherwise the cheapest non-foil.
+        
+        Args:
+            offers: A list of Offer objects
+        
+        Returns:
+            The cheapest foil offer, or cheapest non-foil if no foils available,
+            or None if no offers are available
+        """
+        if not offers:
+            return None
+        
+        # Filter by quality first
+        quality_filtered = self._filter_by_quality(offers)
+        
+        # Filter only available offers
+        available_offers = [o for o in quality_filtered if o.availability]
+        
+        if not available_offers:
+            return None
+        
+        # Try to find cheapest foil first
+        foil_offers = [o for o in available_offers if o.foil]
+        if foil_offers:
+            return min(foil_offers, key=lambda x: x.price)
+        
+        # Fall back to cheapest non-foil
+        non_foil_offers = [o for o in available_offers if not o.foil]
+        if non_foil_offers:
+            return min(non_foil_offers, key=lambda x: x.price)
+    
+    def get_name(self) -> str:
+        return "Foil First, Cheapest"
+
+
 # Registry of available strategies (will be instantiated with min_quality in get_strategy)
 AVAILABLE_STRATEGIES = {
     "cheapest": CheapestStrategy,
@@ -251,6 +294,7 @@ AVAILABLE_STRATEGIES = {
     "cheapest-nonfoil": CheapestNonFoilStrategy,
     "blingiest": BlingiestStrategy,
     "best-condition": BestConditionStrategy,
+    "foil-first-cheapest": FoilFirstCheapestStrategy,
 }
 
 
