@@ -57,6 +57,7 @@ Options:
   --store STORES          Comma-separated list of stores to search (e.g., facetoface,topdeckhero)
   --strategy, -s STRATEGY Selection strategy for choosing best card (default: cheapest)
   --min-quality, -q QUAL  Minimum card quality/condition to consider (e.g., nm, lp, mp)
+  --topdeckhero-discount  Apply TopDeckHero's 20% checkout discount to prices
   --no-cache              Disable caching of search results
   --debug                 Enable debug logging
 ```
@@ -106,6 +107,23 @@ Example combining strategy with minimum quality:
 # Get the cheapest non-foil card, but only LP or better
 python -m mtg_deal_finder cards.txt --strategy cheapest-nonfoil --min-quality lp
 ```
+
+### TopDeckHero Discount
+
+TopDeckHero offers a 20% discount at checkout. You can apply this discount to TopDeckHero prices using the `--topdeckhero-discount` flag:
+
+```bash
+# Apply the 20% discount to TopDeckHero prices
+python -m mtg_deal_finder cards.txt --topdeckhero-discount
+```
+
+When this flag is enabled, all TopDeckHero prices will be reduced by 20% before comparison, giving you a more accurate view of the final price you'll pay.
+
+**Example:**
+- Without discount: TopDeckHero price is $10.00
+- With discount: TopDeckHero price is $8.00 (20% off)
+
+This makes it easier to compare TopDeckHero prices with other stores that don't offer a checkout discount.
 
 ### Store Filtering
 
