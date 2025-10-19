@@ -33,7 +33,23 @@ pip install -r requirements.txt
 
 ## 💻 Usage
 
-### Basic Usage
+### Web UI (Recommended)
+
+The easiest way to use MTG Deal Finder is through the web interface:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+This will open a browser window where you can:
+- Paste your card list directly (no file needed)
+- Configure all search options through an intuitive interface
+- View results in an interactive table
+- Download results as Excel directly in your browser
+
+All CLI options are available in the UI with helpful tooltips explaining each option.
+
+### Command-Line Usage
 
 Create a text file with one card per line (e.g., `cards.txt`):
 ```
