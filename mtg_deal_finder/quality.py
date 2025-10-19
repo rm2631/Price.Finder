@@ -101,13 +101,8 @@ def meets_minimum_quality(condition: str, min_quality: Optional[CardQuality]) ->
         True if the condition meets or exceeds the minimum quality, False otherwise.
         If min_quality is None, always returns True.
         If condition cannot be parsed, returns False.
-        Proxy cards always pass quality checks.
     """
     if min_quality is None:
-        return True
-    
-    # Proxy cards always pass quality checks
-    if condition.lower() == "proxy":
         return True
     
     card_quality = CardQuality.from_string(condition)

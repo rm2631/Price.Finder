@@ -14,7 +14,6 @@ from typing import List, Dict, Optional
 from mtg_deal_finder.cards import Card, Offer
 from mtg_deal_finder.stores.facetoface import FaceToFaceScraper
 from mtg_deal_finder.stores.topdeckhero import TopDeckHeroScraper
-from mtg_deal_finder.stores.proxy import ProxyScraper
 from mtg_deal_finder.strategies import get_strategy, AVAILABLE_STRATEGIES
 from mtg_deal_finder.output import export_to_excel, format_results_table
 from mtg_deal_finder.quality import CardQuality, QUALITY_OPTIONS
@@ -102,20 +101,6 @@ def parse_arguments() -> ArgumentParser:
         action="store_true",
         help="Apply TopDeckHero's 20%% checkout discount to prices. "
              "This discount is available at checkout and is applied to all TopDeckHero prices."
-    )
-    
-    proxy_group = parser.add_mutually_exclusive_group()
-    proxy_group.add_argument(
-        "--proxy-all",
-        action="store_true",
-        help="Enable proxy cards as a source for all cards (foil and non-foil). "
-             "Proxies are priced at $0.45 each."
-    )
-    proxy_group.add_argument(
-        "--proxy-nonfoil",
-        action="store_true",
-        help="Enable proxy cards as a source for non-foil cards only. "
-             "Proxies are priced at $0.45 each."
     )
     
     return parser
@@ -256,45 +241,6 @@ def search_all_stores(cards: List[Card], store_filter: str = None, use_cache: bo
     return card_offers
 
 
-def add_proxy_offers(
-    card_offers: Dict[str, List[Offer]],
-    cards: List[Card],
-    allow_foil: bool = False
-) -> Dict[str, List[Offer]]:
-    """
-    Add proxy card offers to the existing offers for each card.
-    
-    This is done after store searches are complete. Proxies are priced at $0.45
-    and can be enabled for all cards or non-foil only.
-    
-    Args:
-        card_offers: A dictionary mapping card names to lists of offers
-        cards: The list of Card objects that were searched
-        allow_foil: If True, generate proxy offers for both foil and non-foil.
-                   If False, only generate non-foil proxy offers.
-    
-    Returns:
-        Updated dictionary with proxy offers added
-    """
-    logger = logging.getLogger(__name__)
-    proxy_scraper = ProxyScraper(allow_foil=allow_foil)
-    
-    logger.info(f"\nAdding proxy offers (foil allowed: {allow_foil})...")
-    
-    for card in cards:
-        proxy_offers = proxy_scraper.search(card)
-        
-        # Add proxy offers to existing offers for this card
-        if card.name in card_offers:
-            card_offers[card.name].extend(proxy_offers)
-        else:
-            card_offers[card.name] = proxy_offers
-        
-        logger.info(f"  {card.name}: Added {len(proxy_offers)} proxy offer(s)")
-    
-    return card_offers
-
-
 def select_best_offers(
     card_offers: Dict[str, List[Offer]], 
     cards: List[Card],
@@ -399,15 +345,6 @@ def main() -> None:
     # Calculate total offers found from stores
     total_offers = sum(len(offers) for offers in card_offers.values())
     logger.info(f"\nTotal offers found from stores: {total_offers}")
-    
-    # Add proxy offers if enabled
-    if args.proxy_all or args.proxy_nonfoil:
-        allow_foil = args.proxy_all  # proxy_all allows foil, proxy_nonfoil does not
-        card_offers = add_proxy_offers(card_offers, cards, allow_foil=allow_foil)
-        
-        # Recalculate total offers after adding proxies
-        total_offers = sum(len(offers) for offers in card_offers.values())
-        logger.info(f"\nTotal offers (including proxies): {total_offers}")
     
     if total_offers == 0:
         logger.warning("No offers found. Exiting.")
