@@ -7,6 +7,7 @@ a Canadian Magic: The Gathering card store.
 
 import logging
 import re
+import time
 from typing import List
 from urllib.parse import quote_plus
 
@@ -14,6 +15,7 @@ import requests
 
 from mtg_deal_finder.cards import Card, Offer
 from mtg_deal_finder.stores.base import StoreScraper
+from mtg_deal_finder.utils.caching import load_from_cache, save_to_cache
 
 
 logger = logging.getLogger(__name__)
@@ -41,20 +43,27 @@ class FaceToFaceScraper(StoreScraper):
         'DMG': 'Damaged',
     }
     
-    def __init__(self):
-        """Initialize the scraper with a requests session."""
+    def __init__(self, use_cache: bool = True):
+        """
+        Initialize the scraper with a requests session.
+        
+        Args:
+            use_cache: Whether to use caching for search results (default: True)
+        """
         self.session = requests.Session()
         # Set a user agent to appear as a regular browser
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })
+        self.use_cache = use_cache
     
-    def search(self, card: Card) -> List[Offer]:
+    def search(self, card: Card, max_pages: int = 2) -> List[Offer]:
         """
         Search for a card on FaceToFaceGames and return available offers.
         
         Args:
             card: A Card object containing the card name and optional set/quantity
+            max_pages: Maximum number of pages to scrape (default: 2)
         
         Returns:
             A list of Offer objects representing available offers for the card.
@@ -63,26 +72,55 @@ class FaceToFaceScraper(StoreScraper):
         try:
             logger.info(f"Searching FaceToFaceGames for: {card.name}")
             
-            # Construct API URL
-            # Note: The FaceToFaceGames API expects double URL encoding for the search query.
-            # This is because the API internally decodes the query twice - once at the web server level
-            # and once at the application level. Single encoding would result in incorrect search queries.
-            search_query = quote_plus(quote_plus(card.name))
-            api_url = f"{self.API_URL}/keyword/{search_query}/pageSize/50/page/1"
+            # Check cache first
+            if self.use_cache:
+                cached_data = load_from_cache(self.STORE_NAME, card.name)
+                if cached_data:
+                    logger.info(f"Using cached data for {card.name}")
+                    # Convert cached data back to Offer objects
+                    return self._deserialize_offers(cached_data)
             
-            # Make the request
-            logger.debug(f"Fetching API: {api_url}")
-            response = self.session.get(api_url, timeout=10)
-            response.raise_for_status()
+            # Collect offers from multiple pages
+            all_offers = []
             
-            # Parse JSON response
-            data = response.json()
+            for page_num in range(1, max_pages + 1):
+                logger.debug(f"Fetching page {page_num} for {card.name}")
+                
+                # Construct API URL
+                # Note: The FaceToFaceGames API expects double URL encoding for the search query.
+                # This is because the API internally decodes the query twice - once at the web server level
+                # and once at the application level. Single encoding would result in incorrect search queries.
+                search_query = quote_plus(quote_plus(card.name))
+                api_url = f"{self.API_URL}/keyword/{search_query}/pageSize/50/page/{page_num}"
+                
+                # Make the request
+                logger.debug(f"Fetching API: {api_url}")
+                response = self.session.get(api_url, timeout=10)
+                response.raise_for_status()
+                
+                # Parse JSON response
+                data = response.json()
+                
+                # Extract offers from the hits
+                page_offers = self._parse_api_response(data, card.name)
+                
+                if not page_offers:
+                    logger.debug(f"No more results on page {page_num}, stopping pagination")
+                    break
+                
+                all_offers.extend(page_offers)
+                
+                # Add a small delay between pages to be polite
+                if page_num < max_pages:
+                    time.sleep(0.5)
             
-            # Extract offers from the hits
-            offers = self._parse_api_response(data, card.name)
+            logger.info(f"Found {len(all_offers)} offer(s) for {card.name}")
             
-            logger.info(f"Found {len(offers)} offer(s) for {card.name}")
-            return offers
+            # Save to cache
+            if self.use_cache and all_offers:
+                save_to_cache(self.STORE_NAME, card.name, self._serialize_offers(all_offers))
+            
+            return all_offers
             
         except requests.exceptions.RequestException as e:
             logger.error(f"Error fetching data from FaceToFaceGames: {e}")
@@ -284,3 +322,51 @@ class FaceToFaceScraper(StoreScraper):
         cleaned = cleaned.strip()
         
         return cleaned
+    
+    def _serialize_offers(self, offers: List[Offer]) -> List[dict]:
+        """
+        Serialize offers to dictionaries for caching.
+        
+        Args:
+            offers: List of Offer objects
+        
+        Returns:
+            List of dictionaries
+        """
+        return [
+            {
+                'store': offer.store,
+                'card': offer.card,
+                'set': offer.set,
+                'condition': offer.condition,
+                'price': offer.price,
+                'url': offer.url,
+                'foil': offer.foil,
+                'availability': offer.availability
+            }
+            for offer in offers
+        ]
+    
+    def _deserialize_offers(self, data: List[dict]) -> List[Offer]:
+        """
+        Deserialize cached data back to Offer objects.
+        
+        Args:
+            data: List of dictionaries
+        
+        Returns:
+            List of Offer objects
+        """
+        return [
+            Offer(
+                store=item['store'],
+                card=item['card'],
+                set=item['set'],
+                condition=item['condition'],
+                price=item['price'],
+                url=item['url'],
+                foil=item['foil'],
+                availability=item['availability']
+            )
+            for item in data
+        ]

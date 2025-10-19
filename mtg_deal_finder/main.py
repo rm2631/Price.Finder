@@ -13,6 +13,7 @@ from typing import List, Dict
 
 from mtg_deal_finder.cards import Card, Offer
 from mtg_deal_finder.stores.facetoface import FaceToFaceScraper
+from mtg_deal_finder.stores.topdeckhero import TopDeckHeroScraper
 from mtg_deal_finder.strategies import get_strategy, AVAILABLE_STRATEGIES
 from mtg_deal_finder.output import export_to_excel, format_results_table
 
@@ -166,13 +167,14 @@ def read_cards_from_file(filepath: str) -> List[Card]:
     return cards
 
 
-def search_all_stores(cards: List[Card], store_filter: str = None) -> Dict[str, List[Offer]]:
+def search_all_stores(cards: List[Card], store_filter: str = None, use_cache: bool = True) -> Dict[str, List[Offer]]:
     """
     Search all configured stores for the given cards.
     
     Args:
         cards: A list of Card objects to search for
         store_filter: Optional comma-separated list of store names to search
+        use_cache: Whether to use caching for search results (default: True)
     
     Returns:
         A dictionary mapping card names to lists of offers
@@ -181,9 +183,8 @@ def search_all_stores(cards: List[Card], store_filter: str = None) -> Dict[str, 
     
     # Initialize available scrapers
     scrapers = {
-        "facetoface": FaceToFaceScraper(),
-        # Add more scrapers here as they are implemented
-        # "topdeckhero": TopDeckHeroScraper(),
+        "facetoface": FaceToFaceScraper(use_cache=use_cache),
+        "topdeckhero": TopDeckHeroScraper(use_cache=use_cache),
     }
     
     # Filter scrapers if specified
@@ -312,7 +313,7 @@ def main() -> None:
     
     # Search all stores for cards
     logger.info("\nSearching stores...")
-    card_offers = search_all_stores(cards, args.store)
+    card_offers = search_all_stores(cards, args.store, use_cache=not args.no_cache)
     
     # Calculate total offers found
     total_offers = sum(len(offers) for offers in card_offers.values())
