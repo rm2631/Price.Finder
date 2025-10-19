@@ -11,7 +11,6 @@ from typing import List
 from urllib.parse import quote_plus
 
 import requests
-from bs4 import BeautifulSoup
 
 from mtg_deal_finder.cards import Card, Offer
 from mtg_deal_finder.stores.base import StoreScraper
@@ -29,8 +28,18 @@ class FaceToFaceScraper(StoreScraper):
     """
     
     BASE_URL = "https://facetofacegames.com"
-    SEARCH_URL = f"{BASE_URL}/search"
+    API_URL = f"{BASE_URL}/apps/prod-indexer/search"
     STORE_NAME = "FaceToFaceGames"
+    
+    # Condition mapping from SKU codes to readable names
+    CONDITION_MAP = {
+        'NM': 'Near Mint',
+        'LP': 'Lightly Played',
+        'MP': 'Moderately Played',
+        'PL': 'Played',
+        'HP': 'Heavily Played',
+        'DMG': 'Damaged',
+    }
     
     def __init__(self):
         """Initialize the scraper with a requests session."""
@@ -54,20 +63,23 @@ class FaceToFaceScraper(StoreScraper):
         try:
             logger.info(f"Searching FaceToFaceGames for: {card.name}")
             
-            # Construct search URL
-            search_query = quote_plus(card.name)
-            search_url = f"{self.SEARCH_URL}?q={search_query}"
+            # Construct API URL
+            # Note: The FaceToFaceGames API expects double URL encoding for the search query.
+            # This is because the API internally decodes the query twice - once at the web server level
+            # and once at the application level. Single encoding would result in incorrect search queries.
+            search_query = quote_plus(quote_plus(card.name))
+            api_url = f"{self.API_URL}/keyword/{search_query}/pageSize/50/page/1"
             
             # Make the request
-            logger.debug(f"Fetching: {search_url}")
-            response = self.session.get(search_url, timeout=10)
+            logger.debug(f"Fetching API: {api_url}")
+            response = self.session.get(api_url, timeout=10)
             response.raise_for_status()
             
-            # Parse the HTML
-            soup = BeautifulSoup(response.text, 'html.parser')
+            # Parse JSON response
+            data = response.json()
             
-            # Extract offers from the page
-            offers = self._parse_offers(soup, card.name, search_url)
+            # Extract offers from the hits
+            offers = self._parse_api_response(data, card.name)
             
             logger.info(f"Found {len(offers)} offer(s) for {card.name}")
             return offers
@@ -79,106 +91,102 @@ class FaceToFaceScraper(StoreScraper):
             logger.error(f"Unexpected error while searching FaceToFaceGames: {e}")
             return []
     
-    def _parse_offers(self, soup: BeautifulSoup, card_name: str, search_url: str) -> List[Offer]:
+    def _parse_api_response(self, data: dict, card_name: str) -> List[Offer]:
         """
-        Parse offers from the search results page.
+        Parse offers from the API JSON response.
         
         Args:
-            soup: BeautifulSoup object of the search results page
+            data: The JSON response data from the API
             card_name: The name of the card being searched
-            search_url: The URL that was searched
         
         Returns:
             A list of Offer objects
         """
         offers = []
         
-        # FaceToFaceGames typically uses product cards or list items for search results
-        # Common selectors might be: .product-item, .product-card, .search-result, etc.
-        # We'll try multiple common patterns
-        
-        product_elements = (
-            soup.find_all('div', class_=re.compile(r'product[-_]?(item|card|result)', re.I)) or
-            soup.find_all('li', class_=re.compile(r'product[-_]?(item|card|result)', re.I)) or
-            soup.find_all('article', class_=re.compile(r'product', re.I)) or
-            soup.find_all('div', class_=re.compile(r'item', re.I))
-        )
-        
-        logger.debug(f"Found {len(product_elements)} potential product elements")
-        
-        for element in product_elements:
-            try:
-                offer = self._parse_single_offer(element, card_name, search_url)
-                if offer:
-                    offers.append(offer)
-            except Exception as e:
-                logger.debug(f"Error parsing product element: {e}")
-                continue
+        try:
+            hits = data.get('hits', {}).get('hits', [])
+            logger.debug(f"Processing {len(hits)} product hits")
+            
+            for hit in hits:
+                source = hit.get('_source', {})
+                
+                # Filter out non-English cards
+                if self._is_non_english(source.get('title', '')):
+                    logger.debug(f"Skipping non-English card: {source.get('title', '')}")
+                    continue
+                
+                # Process each variant (different conditions)
+                variants = source.get('variants', [])
+                for variant in variants:
+                    try:
+                        offer = self._parse_variant(source, variant, card_name)
+                        if offer:
+                            offers.append(offer)
+                    except Exception as e:
+                        logger.debug(f"Error parsing variant: {e}")
+                        continue
+            
+        except Exception as e:
+            logger.error(f"Error parsing API response: {e}")
         
         return offers
     
-    def _parse_single_offer(self, element, card_name: str, fallback_url: str) -> Offer:
+    def _parse_variant(self, product: dict, variant: dict, card_name: str) -> Offer:
         """
-        Parse a single offer from a product element.
+        Parse a single variant (condition) into an Offer.
         
         Args:
-            element: BeautifulSoup element representing a single product
-            card_name: The name of the card being searched
-            fallback_url: URL to use if no specific product URL is found
+            product: The product data from the API
+            variant: The variant data (represents one condition option)
+            card_name: The original card name searched
         
         Returns:
-            An Offer object, or None if parsing fails or the card is non-English
+            An Offer object, or None if the variant is not valid
         """
-        # Extract card title
-        title_elem = (
-            element.find('h2', class_=re.compile(r'title|name|product', re.I)) or
-            element.find('h3', class_=re.compile(r'title|name|product', re.I)) or
-            element.find('a', class_=re.compile(r'title|name|product', re.I)) or
-            element.find(class_=re.compile(r'product[-_]?name|product[-_]?title', re.I))
-        )
-        
-        if not title_elem:
-            return None
-        
-        full_title = title_elem.get_text(strip=True)
-        
-        # Filter out non-English cards
-        if self._is_non_english(full_title):
-            logger.debug(f"Skipping non-English card: {full_title}")
-            return None
-        
-        # Extract set information
-        card_set = self._extract_set(element, full_title)
-        
-        # Extract condition
-        condition = self._extract_condition(element)
+        # Extract basic info
+        title = product.get('title', '')
+        handle = product.get('handle', '')
         
         # Extract price
-        price = self._extract_price(element)
+        price = variant.get('price')
         if price is None:
             return None
         
-        # Extract foil status
-        is_foil = self._is_foil(element, full_title)
+        # Extract inventory and availability
+        inventory = variant.get('inventoryQuantity', 0)
+        is_available = inventory > 0
         
-        # Extract availability
-        in_stock = self._extract_availability(element)
+        # Extract condition from selectedOptions
+        condition = 'Unknown'
+        selected_options = variant.get('selectedOptions', [])
+        for option in selected_options:
+            if option.get('name') == 'Condition':
+                condition_code = option.get('value', 'Unknown')
+                condition = self.CONDITION_MAP.get(condition_code, condition_code)
+                break
         
-        # Extract URL
-        url = self._extract_url(element, fallback_url)
+        # Determine if foil
+        is_foil = self._is_foil(title)
         
-        # Clean up card name (remove set info, foil markers, etc.)
-        clean_card_name = self._clean_card_name(full_title)
+        # Extract set information
+        card_set = self._extract_set(title)
+        
+        # Clean up card name
+        clean_name = self._clean_card_name(title)
+        
+        # Construct product URL
+        url = f"{self.BASE_URL}/products/{handle}"
         
         return Offer(
             store=self.STORE_NAME,
-            card=clean_card_name,
+            card=clean_name,
             set=card_set,
             condition=condition,
             price=price,
             url=url,
             foil=is_foil,
-            availability=in_stock
+            availability=is_available
         )
     
     def _is_non_english(self, title: str) -> bool:
@@ -191,203 +199,69 @@ class FaceToFaceScraper(StoreScraper):
         Returns:
             True if the card is non-English, False otherwise
         """
-        # Look for language markers in parentheses
+        # Look for language markers in the title
+        # FaceToFaceGames formats non-English cards as: "Card Name - Language [Set]"
+        # Example: "Lightning Bolt - Japanese [123] [Set Name] [Foil]"
         language_markers = [
-            'french', 'japanese', 'german', 'spanish', 'italian',
-            'portuguese', 'russian', 'korean', 'chinese', 'simplified chinese',
-            'traditional chinese'
+            ' - french', ' - japanese', ' - german', ' - spanish', ' - italian',
+            ' - portuguese', ' - russian', ' - korean', ' - chinese', 
+            ' - simplified chinese', ' - traditional chinese'
         ]
         
         title_lower = title.lower()
         for marker in language_markers:
-            if f'({marker})' in title_lower or f'[{marker}]' in title_lower:
+            if marker in title_lower:
                 return True
         
         return False
     
-    def _extract_set(self, element, title: str) -> str:
+    def _extract_set(self, title: str) -> str:
         """
-        Extract set information from the product element or title.
+        Extract set information from the product title.
         
         Args:
-            element: BeautifulSoup element
             title: The card title
         
         Returns:
             The set name or "Unknown"
         """
-        # Try to find set in a dedicated element
-        set_elem = (
-            element.find(class_=re.compile(r'set|edition', re.I)) or
-            element.find('span', class_=re.compile(r'variant|version', re.I))
-        )
+        # FaceToFaceGames format: "Card Name [Number] [Set Name] [Foil/Non-Foil]"
+        # Example: "Lightning Bolt [117] [Double Masters 2022] [Foil]"
         
-        if set_elem:
-            return set_elem.get_text(strip=True)
+        # Extract all text within brackets
+        all_brackets = re.findall(r'\[([^\]]+)\]', title)
         
-        # Try to extract from title (often in brackets or parentheses)
-        # Pattern: "Card Name [SET]" or "Card Name (SET)"
-        set_match = re.search(r'\[([^\]]+)\]|\(([^)]+)\)', title)
-        if set_match:
-            return set_match.group(1) or set_match.group(2)
+        if len(all_brackets) >= 2:
+            # Second bracket is usually the set name
+            # First bracket is typically the card number
+            return all_brackets[1]
+        elif len(all_brackets) == 1:
+            # If only one bracket, check if it looks like a set name
+            # Set names are typically not purely numeric and not foil/non-foil indicators
+            bracket_content = all_brackets[0]
+            if bracket_content.lower() not in ['foil', 'non-foil'] and not bracket_content.isdigit():
+                return bracket_content
         
         return "Unknown"
     
-    def _extract_condition(self, element) -> str:
-        """
-        Extract condition information from the product element.
-        
-        Args:
-            element: BeautifulSoup element
-        
-        Returns:
-            The condition string (e.g., "Near Mint", "Lightly Played")
-        """
-        condition_elem = element.find(class_=re.compile(r'condition|grade', re.I))
-        
-        if condition_elem:
-            return condition_elem.get_text(strip=True)
-        
-        # Check for common condition abbreviations
-        text = element.get_text()
-        condition_patterns = [
-            (r'\bNM\b', 'Near Mint'),
-            (r'\bLP\b', 'Lightly Played'),
-            (r'\bMP\b', 'Moderately Played'),
-            (r'\bHP\b', 'Heavily Played'),
-            (r'\bDMG\b', 'Damaged'),
-            (r'Near Mint', 'Near Mint'),
-            (r'Lightly Played', 'Lightly Played'),
-            (r'Moderately Played', 'Moderately Played'),
-            (r'Heavily Played', 'Heavily Played'),
-            (r'Damaged', 'Damaged'),
-        ]
-        
-        for pattern, condition in condition_patterns:
-            if re.search(pattern, text, re.I):
-                return condition
-        
-        return "Near Mint"  # Default assumption
-    
-    def _extract_price(self, element) -> float:
-        """
-        Extract price from the product element.
-        
-        Args:
-            element: BeautifulSoup element
-        
-        Returns:
-            The price as a float, or None if not found
-        """
-        # Look for price element
-        price_elem = (
-            element.find(class_=re.compile(r'price', re.I)) or
-            element.find('span', class_=re.compile(r'amount|cost', re.I))
-        )
-        
-        if not price_elem:
-            return None
-        
-        price_text = price_elem.get_text(strip=True)
-        
-        # Extract numeric value (handle various formats: $1.99, 1.99, $1,999.99, etc.)
-        price_match = re.search(r'[\$]?\s*([\d,]+\.?\d*)', price_text)
-        if price_match:
-            try:
-                price_str = price_match.group(1).replace(',', '')
-                return float(price_str)
-            except ValueError:
-                return None
-        
-        return None
-    
-    def _is_foil(self, element, title: str) -> bool:
+    def _is_foil(self, title: str) -> bool:
         """
         Determine if the card is foil.
         
         Args:
-            element: BeautifulSoup element
             title: The card title
         
         Returns:
             True if the card is foil, False otherwise
         """
-        # Check title for foil indicator
         title_lower = title.lower()
-        if 'foil' in title_lower:
-            return True
         
-        # Check for foil class or attribute
-        if element.find(class_=re.compile(r'foil', re.I)):
-            return True
+        # Check for [Non-Foil] first - if present, definitely not foil
+        if '[non-foil]' in title_lower or '(non-foil)' in title_lower:
+            return False
         
-        # Check element text
-        if 'foil' in element.get_text().lower():
-            return True
-        
-        return False
-    
-    def _extract_availability(self, element) -> bool:
-        """
-        Extract availability status from the product element.
-        
-        Args:
-            element: BeautifulSoup element
-        
-        Returns:
-            True if in stock, False otherwise
-        """
-        # Look for availability indicators
-        stock_elem = element.find(class_=re.compile(r'stock|availability|inventory', re.I))
-        
-        if stock_elem:
-            stock_text = stock_elem.get_text(strip=True).lower()
-            # Check for out of stock indicators
-            if any(phrase in stock_text for phrase in ['out of stock', 'sold out', 'unavailable']):
-                return False
-            # Check for in stock indicators
-            if any(phrase in stock_text for phrase in ['in stock', 'available', 'in-stock']):
-                return True
-        
-        # Check for buttons (add to cart usually means in stock)
-        add_button = element.find('button', class_=re.compile(r'add[-_]?to[-_]?cart', re.I))
-        if add_button:
-            # Check if button is disabled (presence of disabled attribute means disabled)
-            if add_button.has_attr('disabled'):
-                return False
-            return True
-        
-        # Default to true (assume available unless proven otherwise)
-        return True
-    
-    def _extract_url(self, element, fallback_url: str) -> str:
-        """
-        Extract product URL from the element.
-        
-        Args:
-            element: BeautifulSoup element
-            fallback_url: URL to use if no specific URL is found
-        
-        Returns:
-            The product URL
-        """
-        # Look for link in title or product element
-        link_elem = (
-            element.find('a', href=True) or
-            element.find('a', class_=re.compile(r'product|title|link', re.I))
-        )
-        
-        if link_elem and link_elem.get('href'):
-            href = link_elem['href']
-            # Make absolute URL if needed
-            if href.startswith('/'):
-                return f"{self.BASE_URL}{href}"
-            elif href.startswith('http'):
-                return href
-            else:
-                return f"{self.BASE_URL}/{href}"
-        
-        return fallback_url
+        # Check for [Foil] indicator
+        return '[foil]' in title_lower or '(foil)' in title_lower
     
     def _clean_card_name(self, title: str) -> str:
         """
@@ -399,15 +273,14 @@ class FaceToFaceScraper(StoreScraper):
         Returns:
             The cleaned card name
         """
-        # Remove set information in brackets or parentheses
-        cleaned = re.sub(r'\[([^\]]+)\]|\(([^)]+)\)', '', title)
+        # Remove everything in brackets
+        cleaned = re.sub(r'\[([^\]]+)\]', '', title)
         
         # Remove foil indicator
         cleaned = re.sub(r'\bfoil\b', '', cleaned, flags=re.I)
         
-        # Remove extra whitespace and dashes
+        # Remove extra whitespace
         cleaned = ' '.join(cleaned.split())
-        cleaned = re.sub(r'\s*-\s*$', '', cleaned)  # Remove trailing dash
-        cleaned = re.sub(r'^\s*-\s*', '', cleaned)  # Remove leading dash
+        cleaned = cleaned.strip()
         
-        return cleaned.strip()
+        return cleaned

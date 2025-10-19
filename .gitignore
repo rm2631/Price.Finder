@@ -53,3 +53,4 @@ htmlcov/
 *.log
 *.tmp
 /tmp/
+*.xlsx

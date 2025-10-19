@@ -9,9 +9,12 @@ comparison workflow.
 import logging
 import sys
 from argparse import ArgumentParser
-from typing import List
+from typing import List, Dict
 
-from mtg_deal_finder.cards import Card
+from mtg_deal_finder.cards import Card, Offer
+from mtg_deal_finder.stores.facetoface import FaceToFaceScraper
+from mtg_deal_finder.strategies import get_strategy, AVAILABLE_STRATEGIES
+from mtg_deal_finder.output import export_to_excel, format_results_table
 
 
 # Configure logging
@@ -72,6 +75,14 @@ def parse_arguments() -> ArgumentParser:
         "--debug",
         action="store_true",
         help="Enable debug logging"
+    )
+    
+    parser.add_argument(
+        "--strategy",
+        "-s",
+        default="cheapest",
+        help=f"Selection strategy for choosing the best card offer. "
+             f"Options: {', '.join(AVAILABLE_STRATEGIES.keys())} (default: cheapest)"
     )
     
     return parser
@@ -155,6 +166,107 @@ def read_cards_from_file(filepath: str) -> List[Card]:
     return cards
 
 
+def search_all_stores(cards: List[Card], store_filter: str = None) -> Dict[str, List[Offer]]:
+    """
+    Search all configured stores for the given cards.
+    
+    Args:
+        cards: A list of Card objects to search for
+        store_filter: Optional comma-separated list of store names to search
+    
+    Returns:
+        A dictionary mapping card names to lists of offers
+    """
+    logger = logging.getLogger(__name__)
+    
+    # Initialize available scrapers
+    scrapers = {
+        "facetoface": FaceToFaceScraper(),
+        # Add more scrapers here as they are implemented
+        # "topdeckhero": TopDeckHeroScraper(),
+    }
+    
+    # Filter scrapers if specified
+    if store_filter:
+        requested_stores = [s.strip().lower() for s in store_filter.split(',')]
+        scrapers = {
+            name: scraper 
+            for name, scraper in scrapers.items() 
+            if name in requested_stores
+        }
+        
+        if not scrapers:
+            logger.error(f"No valid stores found in filter: {store_filter}")
+            return {}
+    
+    logger.info(f"Searching {len(scrapers)} store(s): {', '.join(scrapers.keys())}")
+    
+    # Collect all offers for each card
+    card_offers = {}
+    
+    for card in cards:
+        logger.info(f"\nSearching for: {card.name}")
+        all_offers = []
+        
+        for store_name, scraper in scrapers.items():
+            try:
+                offers = scraper.search(card)
+                all_offers.extend(offers)
+                logger.info(f"  {store_name}: Found {len(offers)} offer(s)")
+            except Exception as e:
+                logger.error(f"  {store_name}: Error searching - {e}")
+        
+        card_offers[card.name] = all_offers
+    
+    return card_offers
+
+
+def select_best_offers(
+    card_offers: Dict[str, List[Offer]], 
+    cards: List[Card],
+    strategy_name: str = "cheapest"
+) -> List[Offer]:
+    """
+    Select the best offer for each card based on the given strategy.
+    
+    Args:
+        card_offers: A dictionary mapping card names to lists of offers
+        cards: Original list of Card objects (for quantity info)
+        strategy_name: Name of the selection strategy to use
+    
+    Returns:
+        A list of selected best offers
+    """
+    logger = logging.getLogger(__name__)
+    
+    try:
+        strategy = get_strategy(strategy_name)
+        logger.info(f"\nUsing selection strategy: {strategy.get_name()}")
+    except ValueError as e:
+        logger.error(str(e))
+        logger.info("Falling back to 'cheapest' strategy")
+        strategy = get_strategy("cheapest")
+    
+    selected_offers = []
+    
+    for card in cards:
+        offers = card_offers.get(card.name, [])
+        
+        if not offers:
+            logger.warning(f"No offers found for: {card.name}")
+            continue
+        
+        best_offer = strategy.select(offers)
+        
+        if best_offer:
+            logger.info(f"Selected for {card.name}: ${best_offer.price:.2f} from {best_offer.store}")
+            selected_offers.append(best_offer)
+        else:
+            logger.warning(f"No suitable offer found for {card.name} with strategy '{strategy_name}'")
+    
+    return selected_offers
+
+
 def main() -> None:
     """
     Main application entry point.
@@ -198,17 +310,44 @@ def main() -> None:
         qty_info = f" x{card.qty}" if card.qty > 1 else ""
         logger.debug(f"  - {card.name}{set_info}{qty_info}")
     
-    # TODO: Implement store scraping logic
-    logger.info("Store scraping not yet implemented")
-    logger.info("This is a foundation setup - scrapers will be added in future updates")
+    # Search all stores for cards
+    logger.info("\nSearching stores...")
+    card_offers = search_all_stores(cards, args.store)
     
-    # For now, just show that the structure is working
-    logger.info("")
-    logger.info("Foundation setup complete!")
-    logger.info("Next steps:")
-    logger.info("  1. Implement store-specific scrapers")
-    logger.info("  2. Add price comparison logic")
-    logger.info("  3. Export results to Excel")
+    # Calculate total offers found
+    total_offers = sum(len(offers) for offers in card_offers.values())
+    logger.info(f"\nTotal offers found: {total_offers}")
+    
+    if total_offers == 0:
+        logger.warning("No offers found. Exiting.")
+        return
+    
+    # Select best offers based on strategy
+    selected_offers = select_best_offers(card_offers, cards, args.strategy)
+    
+    if not selected_offers:
+        logger.warning("No suitable offers selected. Exiting.")
+        return
+    
+    # Display results
+    logger.info("\n" + "=" * 50)
+    logger.info("SELECTED BEST DEALS:")
+    logger.info("=" * 50)
+    logger.info("\n" + format_results_table(selected_offers))
+    
+    # Calculate total cost
+    total_cost = sum(offer.price for offer in selected_offers)
+    logger.info(f"\nTotal cost: ${total_cost:.2f}")
+    
+    # Export to Excel
+    try:
+        export_to_excel(selected_offers, args.out)
+        logger.info(f"\nResults exported to: {args.out}")
+    except Exception as e:
+        logger.error(f"Error exporting to Excel: {e}")
+        return
+    
+    logger.info("\nDone!")
 
 
 if __name__ == "__main__":

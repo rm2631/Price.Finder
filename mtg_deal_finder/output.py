@@ -23,12 +23,13 @@ def create_dataframe(offers: List[Offer]) -> pd.DataFrame:
     """
     if not offers:
         # Return empty DataFrame with expected columns
-        return pd.DataFrame(columns=["Card", "Set", "Condition", "Price", "Store", "URL"])
+        return pd.DataFrame(columns=["Card", "Set", "Condition", "Foil", "Price", "Store", "URL"])
     
     data = {
         "Card": [offer.card for offer in offers],
         "Set": [offer.set for offer in offers],
         "Condition": [offer.condition for offer in offers],
+        "Foil": [offer.foil for offer in offers],
         "Price": [offer.price for offer in offers],
         "Store": [offer.store for offer in offers],
         "URL": [offer.url for offer in offers],
@@ -71,7 +72,6 @@ def export_to_excel(offers: List[Offer], output_path: str) -> None:
     # Export to Excel
     try:
         df.to_excel(str(path), index=False, engine='openpyxl')
-        print(f"Results exported to {path}")
     except Exception as e:
         raise IOError(f"Failed to write Excel file: {e}")
 
