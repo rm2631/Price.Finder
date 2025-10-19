@@ -18,7 +18,6 @@ from mtg_deal_finder.cards import Card, Offer
 from mtg_deal_finder.main import (
     parse_card_line,
     search_all_stores,
-    add_proxy_offers,
     select_best_offers,
     setup_logging
 )
@@ -163,16 +162,6 @@ def main():
         help="Only show cards at this quality level or better. For example, 'Lightly Played' will show LP, NM, and Mint cards."
     )
     
-    # Proxy options
-    st.sidebar.subheader("Proxy Cards")
-    st.sidebar.markdown("Include proxy cards at $0.45 each as an option:")
-    
-    proxy_option = st.sidebar.radio(
-        "Proxy Options",
-        options=["No proxies", "Non-foil proxies only", "All proxies (foil & non-foil)"],
-        help="Proxy cards are always priced at $0.45 each. They will be included in the comparison if enabled."
-    )
-    
     # Cache options
     st.sidebar.subheader("Cache Settings")
     use_cache = st.sidebar.checkbox(
@@ -252,16 +241,6 @@ def main():
                 topdeckhero_discount=topdeckhero_discount
             )
             progress_bar.progress(50)
-            
-            # Add proxy offers if enabled
-            if proxy_option == "Non-foil proxies only":
-                status_text.text("Adding non-foil proxy offers...")
-                card_offers = add_proxy_offers(card_offers, cards, allow_foil=False)
-            elif proxy_option == "All proxies (foil & non-foil)":
-                status_text.text("Adding proxy offers (foil and non-foil)...")
-                card_offers = add_proxy_offers(card_offers, cards, allow_foil=True)
-            
-            progress_bar.progress(75)
             
             # Calculate total offers
             total_offers = sum(len(offers) for offers in card_offers.values())
