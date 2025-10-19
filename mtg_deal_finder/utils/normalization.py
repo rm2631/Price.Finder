@@ -149,7 +149,8 @@ def card_name_matches_query(card_name: str, query: str) -> bool:
     
     This function validates that the card name from a store result actually matches
     the original search query. It uses case-insensitive comparison and checks if
-    all significant words from the query appear in the card name.
+    all words from the query appear in the card name, filtering out common words
+    that might be descriptors rather than part of the card name.
     
     Args:
         card_name: The card name from the store result
@@ -165,6 +166,8 @@ def card_name_matches_query(card_name: str, query: str) -> bool:
         False
         >>> card_name_matches_query("Brainstorm", "brainstorm")
         True
+        >>> card_name_matches_query("Sol Ring", "sol ring")
+        True
     """
     if not card_name or not query:
         return False
@@ -173,16 +176,24 @@ def card_name_matches_query(card_name: str, query: str) -> bool:
     normalized_card = normalize_card_name(card_name).lower()
     normalized_query = normalize_card_name(query).lower()
     
-    # Split query into words (filtering out very short words that might be common)
-    query_words = [word for word in normalized_query.split() if len(word) >= 3]
+    # Common words that are typically descriptors, not part of card names
+    # These are words that might be added to searches but aren't part of the actual card name
+    descriptor_words = {'foil', 'non-foil', 'nonfoil', 'promo', 'extended', 'art', 'showcase', 
+                        'borderless', 'full', 'alternate', 'alt'}
     
-    # If query has no significant words, fall back to simple containment check
-    if not query_words:
-        return normalized_query in normalized_card
+    # Split query into words
+    query_words = normalized_query.split()
     
-    # Check if all significant query words appear in the card name
+    # Filter out descriptor words from the query - these are optional matches
+    core_query_words = [word for word in query_words if word not in descriptor_words]
+    
+    # If query has no core words after filtering (very unlikely), require exact match
+    if not core_query_words:
+        return normalized_query == normalized_card
+    
+    # Check if all core query words appear in the card name
     # This handles cases where card names have additional text (e.g., "Lightning Bolt - Foil")
-    for word in query_words:
+    for word in core_query_words:
         if word not in normalized_card:
             return False
     
