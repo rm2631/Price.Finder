@@ -1,12 +1,14 @@
 # MTG Deal Finder 💰🃏
 
-A command-line tool that helps Magic: The Gathering players in Canada find the cheapest prices for missing cards across multiple online stores (currently supports FaceToFaceGames, with more stores coming soon).
+A command-line tool that helps Magic: The Gathering players in Canada find the cheapest prices for missing cards across multiple online stores (currently supports FaceToFaceGames and TopDeckHero, with more stores coming soon).
 
 You provide a simple text list of cards you need, and the tool searches each store, normalizes results, compares prices, and outputs an Excel spreadsheet with the best available deals.
 
 ## 🚀 Features
 
-- **Scrapes multiple Canadian MTG stores** for card prices (currently FaceToFaceGames)
+- **Scrapes multiple Canadian MTG stores** for card prices (FaceToFaceGames and TopDeckHero)
+- **Automatic caching** — search results are cached for 24 hours to improve performance
+- **Multi-page support** — scrapes up to 2 pages of results per store for better coverage
 - **Modular architecture** — add new stores easily
 - **Multiple selection strategies** — choose cheapest, best condition, foil/non-foil preferences
 - **Uses consistent data models** for clean comparison
@@ -51,7 +53,7 @@ python -m mtg_deal_finder <input_file> [options]
 
 Options:
   --out, -o FILE          Output Excel file path (default: results.xlsx)
-  --store STORES          Comma-separated list of stores to search (e.g., facetoface)
+  --store STORES          Comma-separated list of stores to search (e.g., facetoface,topdeckhero)
   --strategy, -s STRATEGY Selection strategy for choosing best card (default: cheapest)
   --no-cache              Disable caching of search results
   --debug                 Enable debug logging
@@ -70,6 +72,29 @@ The tool supports multiple strategies for selecting the best card offer:
 Example using a strategy:
 ```bash
 python -m mtg_deal_finder cards.txt --strategy best-condition --out nm_results.xlsx
+```
+
+### Store Filtering
+
+You can limit your search to specific stores:
+
+```bash
+# Search only TopDeckHero
+python -m mtg_deal_finder cards.txt --store topdeckhero
+
+# Search only FaceToFaceGames
+python -m mtg_deal_finder cards.txt --store facetoface
+
+# Search both stores (default)
+python -m mtg_deal_finder cards.txt --store facetoface,topdeckhero
+```
+
+### Caching
+
+Search results are automatically cached for 24 hours to improve performance on repeated searches. To disable caching:
+
+```bash
+python -m mtg_deal_finder cards.txt --no-cache
 ```
 
 ### Input Format
@@ -120,11 +145,12 @@ mtg_deal_finder/
 ├── stores/
 │   ├── base.py             # Abstract StoreScraper interface
 │   ├── facetoface.py       # FaceToFace scraper (uses store API)
+│   ├── topdeckhero.py      # TopDeckHero scraper (HTML scraping)
 │   └── [future stores]     # Additional store implementations
 ├── compare.py               # Price aggregation and comparison logic
 ├── output.py                # Excel export logic
 └── utils/
-    ├── caching.py          # Optional caching layer
+    ├── caching.py          # Local caching layer (24-hour TTL)
     └── normalization.py    # Fuzzy matching and validation
 ```
 
@@ -139,10 +165,11 @@ This makes adding new stores straightforward.
 ### 4. Scraping Strategy
 
 - **API-first approach**: Use store APIs when available (e.g., FaceToFaceGames search API)
-- **Static HTML fallback**: Use requests + BeautifulSoup for stores without APIs
-- **Dynamic pages**: Use Playwright or Selenium in headless mode when necessary
-- **Caching**: Cache results locally to avoid re-fetching identical pages
-- **Rate limiting**: Add delays to stay polite and avoid rate limits
+- **Static HTML fallback**: Use requests + BeautifulSoup for stores without APIs (e.g., TopDeckHero)
+- **Dynamic pages**: Use Playwright or Selenium in headless mode when necessary (reserved for future stores)
+- **Caching**: Cache results locally (24-hour TTL) to avoid re-fetching identical pages
+- **Pagination**: Scrape up to 2 pages per store for better coverage
+- **Rate limiting**: Add delays between page requests to stay polite and avoid rate limits
 
 ### 5. Selection Strategies
 
@@ -202,7 +229,7 @@ Keep it simple, modular, and extensible:
 
 ## 🚀 Future Enhancements
 
-- Add more stores (TopDeckHero, FusionGaming, 401Games, etc.)
+- Add more stores (FusionGaming, 401Games, etc.)
 - Implement multithreaded scraping for faster results
 - Include shipping cost estimation
 - Integrate login/cart linking
