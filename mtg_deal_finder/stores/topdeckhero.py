@@ -17,6 +17,7 @@ from bs4 import BeautifulSoup
 from mtg_deal_finder.cards import Card, Offer
 from mtg_deal_finder.stores.base import StoreScraper
 from mtg_deal_finder.utils.caching import load_from_cache, save_to_cache
+from mtg_deal_finder.utils.normalization import card_name_matches_query
 
 
 logger = logging.getLogger(__name__)
@@ -173,9 +174,11 @@ class TopDeckHeroScraper(StoreScraper):
                     
                     for variant in variants:
                         try:
-                            offer = self._parse_variant(variant, product_name, product_set, product_url)
-                            if offer:
+                            offer = self._parse_variant(variant, product_name, product_set, product_url, card_name)
+                            if offer and card_name_matches_query(offer.card, card_name):
                                 offers.append(offer)
+                            elif offer:
+                                logger.debug(f"Rejected offer: '{offer.card}' doesn't match query '{card_name}'")
                         except Exception as e:
                             logger.debug(f"Error parsing variant: {e}")
                             continue
@@ -190,7 +193,7 @@ class TopDeckHeroScraper(StoreScraper):
         return offers
     
     def _parse_variant(self, variant: BeautifulSoup, product_name: str, 
-                      product_set: str, product_url: str) -> Offer:
+                      product_set: str, product_url: str, query: str = "") -> Offer:
         """
         Parse a single variant (condition) into an Offer.
         
@@ -199,6 +202,7 @@ class TopDeckHeroScraper(StoreScraper):
             product_name: The product name
             product_set: The product set/category
             product_url: The product URL
+            query: The original search query (card name)
         
         Returns:
             An Offer object, or None if the variant is not valid
@@ -273,7 +277,8 @@ class TopDeckHeroScraper(StoreScraper):
             price=price,
             url=product_url,
             foil=is_foil,
-            availability=is_available
+            availability=is_available,
+            query=query
         )
     
     def _clean_card_name(self, title: str) -> str:
@@ -311,7 +316,8 @@ class TopDeckHeroScraper(StoreScraper):
                 'price': offer.price,
                 'url': offer.url,
                 'foil': offer.foil,
-                'availability': offer.availability
+                'availability': offer.availability,
+                'query': offer.query
             }
             for offer in offers
         ]
@@ -335,7 +341,8 @@ class TopDeckHeroScraper(StoreScraper):
                 price=item['price'],
                 url=item['url'],
                 foil=item['foil'],
-                availability=item['availability']
+                availability=item['availability'],
+                query=item.get('query', '')  # Use get() for backward compatibility
             )
             for item in data
         ]

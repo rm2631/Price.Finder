@@ -141,3 +141,49 @@ def normalize_price(price: str) -> float:
         return float(cleaned)
     except ValueError:
         raise ValueError(f"Cannot parse price: {price}")
+
+
+def card_name_matches_query(card_name: str, query: str) -> bool:
+    """
+    Check if a card name matches the search query.
+    
+    This function validates that the card name from a store result actually matches
+    the original search query. It uses case-insensitive comparison and checks if
+    all significant words from the query appear in the card name.
+    
+    Args:
+        card_name: The card name from the store result
+        query: The original search query (card name)
+    
+    Returns:
+        True if the card name matches the query, False otherwise
+    
+    Example:
+        >>> card_name_matches_query("Lightning Bolt", "lightning bolt")
+        True
+        >>> card_name_matches_query("Brainstone", "brainstorm")
+        False
+        >>> card_name_matches_query("Brainstorm", "brainstorm")
+        True
+    """
+    if not card_name or not query:
+        return False
+    
+    # Normalize both strings for comparison
+    normalized_card = normalize_card_name(card_name).lower()
+    normalized_query = normalize_card_name(query).lower()
+    
+    # Split query into words (filtering out very short words that might be common)
+    query_words = [word for word in normalized_query.split() if len(word) >= 3]
+    
+    # If query has no significant words, fall back to simple containment check
+    if not query_words:
+        return normalized_query in normalized_card
+    
+    # Check if all significant query words appear in the card name
+    # This handles cases where card names have additional text (e.g., "Lightning Bolt - Foil")
+    for word in query_words:
+        if word not in normalized_card:
+            return False
+    
+    return True

@@ -16,6 +16,7 @@ import requests
 from mtg_deal_finder.cards import Card, Offer
 from mtg_deal_finder.stores.base import StoreScraper
 from mtg_deal_finder.utils.caching import load_from_cache, save_to_cache
+from mtg_deal_finder.utils.normalization import card_name_matches_query
 
 
 logger = logging.getLogger(__name__)
@@ -159,8 +160,10 @@ class FaceToFaceScraper(StoreScraper):
                 for variant in variants:
                     try:
                         offer = self._parse_variant(source, variant, card_name)
-                        if offer:
+                        if offer and card_name_matches_query(offer.card, card_name):
                             offers.append(offer)
+                        elif offer:
+                            logger.debug(f"Rejected offer: '{offer.card}' doesn't match query '{card_name}'")
                     except Exception as e:
                         logger.debug(f"Error parsing variant: {e}")
                         continue
@@ -224,7 +227,8 @@ class FaceToFaceScraper(StoreScraper):
             price=price,
             url=url,
             foil=is_foil,
-            availability=is_available
+            availability=is_available,
+            query=card_name
         )
     
     def _is_non_english(self, title: str) -> bool:
@@ -342,7 +346,8 @@ class FaceToFaceScraper(StoreScraper):
                 'price': offer.price,
                 'url': offer.url,
                 'foil': offer.foil,
-                'availability': offer.availability
+                'availability': offer.availability,
+                'query': offer.query
             }
             for offer in offers
         ]
@@ -366,7 +371,8 @@ class FaceToFaceScraper(StoreScraper):
                 price=item['price'],
                 url=item['url'],
                 foil=item['foil'],
-                availability=item['availability']
+                availability=item['availability'],
+                query=item.get('query', '')  # Use get() for backward compatibility
             )
             for item in data
         ]
