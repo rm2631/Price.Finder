@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-MTG Deal Finder is a command-line tool that helps Magic: The Gathering players in Canada find the cheapest prices for cards across multiple online stores. The tool scrapes store websites/APIs, normalizes results, compares prices, and outputs an Excel spreadsheet with the best available deals.
+MTG Deal Finder is a command-line tool that helps Magic: The Gathering players in Canada find the cheapest prices for cards across online stores. Currently supports FaceToFaceGames and TopDeckHero, with a modular architecture designed to easily add more stores in the future. The tool scrapes store websites/APIs, normalizes results, compares prices, and outputs an Excel spreadsheet with the best available deals.
 
 ## Architecture
 
@@ -46,7 +46,7 @@ MTG Deal Finder is a command-line tool that helps Magic: The Gathering players i
 
 ### Core Dependencies
 - **requests**: HTTP requests for API calls and web scraping
-- **beautifulsoup4**: HTML parsing (for stores without APIs)
+- **beautifulsoup4**: HTML parsing (currently used by TopDeckHero scraper)
 - **pandas**: Data manipulation and Excel export
 - **openpyxl**: Excel file generation
 
@@ -149,11 +149,11 @@ python -m mtg_deal_finder cards.txt --strategy best-condition
 
 The tool supports several input formats:
 - Simple name: `Lightning Bolt`
-- With set code: `Counterspell (7ED)` or `Counterspell [Seventh Edition]`
+- With set code: `Counterspell (7ED)` (parentheses format)
 - With quantity: `Brainstorm x4` or `4x Brainstorm`
 - Combined: `Counterspell (7ED) x2`
 
-Parsing logic is in `main.py` (`parse_card_line` function).
+Parsing logic is in `main.py` (`parse_card_line` function). Note: Currently only parentheses format `(SET)` is supported for set codes, not square brackets.
 
 ## Output Format
 
