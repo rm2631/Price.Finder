@@ -9,13 +9,14 @@ comparison workflow.
 import logging
 import sys
 from argparse import ArgumentParser
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 from mtg_deal_finder.cards import Card, Offer
 from mtg_deal_finder.stores.facetoface import FaceToFaceScraper
 from mtg_deal_finder.stores.topdeckhero import TopDeckHeroScraper
 from mtg_deal_finder.strategies import get_strategy, AVAILABLE_STRATEGIES
 from mtg_deal_finder.output import export_to_excel, format_results_table
+from mtg_deal_finder.quality import CardQuality, QUALITY_OPTIONS
 
 
 # Configure logging
@@ -84,6 +85,15 @@ def parse_arguments() -> ArgumentParser:
         default="cheapest",
         help=f"Selection strategy for choosing the best card offer. "
              f"Options: {', '.join(AVAILABLE_STRATEGIES.keys())} (default: cheapest)"
+    )
+    
+    parser.add_argument(
+        "--min-quality",
+        "-q",
+        help=f"Minimum card quality/condition to consider. "
+             f"Options: {', '.join(QUALITY_OPTIONS)} (default: no restriction). "
+             f"This filters out cards below the specified condition. "
+             f"For example, '--min-quality lp' will only show Lightly Played or better cards."
     )
     
     return parser
@@ -225,7 +235,8 @@ def search_all_stores(cards: List[Card], store_filter: str = None, use_cache: bo
 def select_best_offers(
     card_offers: Dict[str, List[Offer]], 
     cards: List[Card],
-    strategy_name: str = "cheapest"
+    strategy_name: str = "cheapest",
+    min_quality: Optional[CardQuality] = None
 ) -> List[Offer]:
     """
     Select the best offer for each card based on the given strategy.
@@ -234,6 +245,7 @@ def select_best_offers(
         card_offers: A dictionary mapping card names to lists of offers
         cards: Original list of Card objects (for quantity info)
         strategy_name: Name of the selection strategy to use
+        min_quality: Minimum quality level to filter offers, or None for no restriction
     
     Returns:
         A list of selected best offers
@@ -241,12 +253,15 @@ def select_best_offers(
     logger = logging.getLogger(__name__)
     
     try:
-        strategy = get_strategy(strategy_name)
-        logger.info(f"\nUsing selection strategy: {strategy.get_name()}")
+        strategy = get_strategy(strategy_name, min_quality)
+        strategy_desc = strategy.get_name()
+        if min_quality:
+            strategy_desc += f" (minimum quality: {min_quality.to_display_name()})"
+        logger.info(f"\nUsing selection strategy: {strategy_desc}")
     except ValueError as e:
         logger.error(str(e))
         logger.info("Falling back to 'cheapest' strategy")
-        strategy = get_strategy("cheapest")
+        strategy = get_strategy("cheapest", min_quality)
     
     selected_offers = []
     
@@ -323,8 +338,18 @@ def main() -> None:
         logger.warning("No offers found. Exiting.")
         return
     
+    # Parse minimum quality if provided
+    min_quality = None
+    if args.min_quality:
+        min_quality = CardQuality.from_string(args.min_quality)
+        if min_quality is None:
+            logger.error(f"Invalid minimum quality: {args.min_quality}")
+            logger.info(f"Valid options: {', '.join(QUALITY_OPTIONS)}")
+            return
+        logger.info(f"Filtering for minimum quality: {min_quality.to_display_name()}")
+    
     # Select best offers based on strategy
-    selected_offers = select_best_offers(card_offers, cards, args.strategy)
+    selected_offers = select_best_offers(card_offers, cards, args.strategy, min_quality)
     
     if not selected_offers:
         logger.warning("No suitable offers selected. Exiting.")

@@ -11,6 +11,7 @@ You provide a simple text list of cards you need, and the tool searches each sto
 - **Multi-page support** — scrapes up to 2 pages of results per store for better coverage
 - **Modular architecture** — add new stores easily
 - **Multiple selection strategies** — choose cheapest, best condition, foil/non-foil preferences
+- **Quality filtering** — set minimum quality requirements to avoid buying cards in poor condition
 - **Uses consistent data models** for clean comparison
 - **Outputs a neatly formatted Excel file** with all details
 - **Fast and efficient** — uses store APIs when available
@@ -55,9 +56,33 @@ Options:
   --out, -o FILE          Output Excel file path (default: results.xlsx)
   --store STORES          Comma-separated list of stores to search (e.g., facetoface,topdeckhero)
   --strategy, -s STRATEGY Selection strategy for choosing best card (default: cheapest)
+  --min-quality, -q QUAL  Minimum card quality/condition to consider (e.g., nm, lp, mp)
   --no-cache              Disable caching of search results
   --debug                 Enable debug logging
 ```
+
+### Minimum Quality Filter
+
+You can filter results to only show cards that meet a minimum quality requirement:
+
+```bash
+# Only show Near Mint or better cards
+python -m mtg_deal_finder cards.txt --min-quality nm
+
+# Only show Lightly Played or better cards
+python -m mtg_deal_finder cards.txt --min-quality lp
+```
+
+**Quality levels** (from best to worst):
+- **mint** or **m**: Mint condition
+- **nm**: Near Mint
+- **lp**: Lightly Played
+- **mp**: Moderately Played
+- **played** or **pl**: Played
+- **hp**: Heavily Played
+- **damaged** or **dmg**: Damaged
+
+When you specify a minimum quality, only cards at that quality level or better will be considered. For example, `--min-quality lp` will show Near Mint and Lightly Played cards, but filter out Moderately Played, Played, Heavily Played, and Damaged cards.
 
 ### Selection Strategies
 
@@ -69,9 +94,17 @@ The tool supports multiple strategies for selecting the best card offer:
 - **best-condition**: Selects the cheapest Near Mint condition card
 - **blingiest**: Selects the most expensive foil card (for "bling" factor)
 
+All strategies respect the minimum quality filter if specified.
+
 Example using a strategy:
 ```bash
 python -m mtg_deal_finder cards.txt --strategy best-condition --out nm_results.xlsx
+```
+
+Example combining strategy with minimum quality:
+```bash
+# Get the cheapest non-foil card, but only LP or better
+python -m mtg_deal_finder cards.txt --strategy cheapest-nonfoil --min-quality lp
 ```
 
 ### Store Filtering
