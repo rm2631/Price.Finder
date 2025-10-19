@@ -112,6 +112,12 @@ def normalize_condition(condition: str) -> str:
     return condition_map.get(condition_upper, condition_upper)
 
 
+# Common words that are typically descriptors, not part of card names
+# These are words that might be added to searches but aren't part of the actual card name
+DESCRIPTOR_WORDS = {'foil', 'non-foil', 'nonfoil', 'promo', 'extended', 'art', 'showcase', 
+                    'borderless', 'full', 'alternate', 'alt'}
+
+
 def normalize_price(price: str) -> float:
     """
     Extract and normalize a price from a string.
@@ -176,18 +182,14 @@ def card_name_matches_query(card_name: str, query: str) -> bool:
     normalized_card = normalize_card_name(card_name).lower()
     normalized_query = normalize_card_name(query).lower()
     
-    # Common words that are typically descriptors, not part of card names
-    # These are words that might be added to searches but aren't part of the actual card name
-    descriptor_words = {'foil', 'non-foil', 'nonfoil', 'promo', 'extended', 'art', 'showcase', 
-                        'borderless', 'full', 'alternate', 'alt'}
-    
     # Split query into words
     query_words = normalized_query.split()
     
     # Filter out descriptor words from the query - these are optional matches
-    core_query_words = [word for word in query_words if word not in descriptor_words]
+    core_query_words = [word for word in query_words if word not in DESCRIPTOR_WORDS]
     
-    # If query has no core words after filtering (very unlikely), require exact match
+    # If query has no core words after filtering, require exact match
+    # This handles edge cases like searching for just "foil" or "promo" alone
     if not core_query_words:
         return normalized_query == normalized_card
     
