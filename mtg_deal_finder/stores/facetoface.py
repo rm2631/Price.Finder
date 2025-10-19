@@ -352,8 +352,8 @@ class FaceToFaceScraper(StoreScraper):
         # Check for buttons (add to cart usually means in stock)
         add_button = element.find('button', class_=re.compile(r'add[-_]?to[-_]?cart', re.I))
         if add_button:
-            # Check if button is disabled
-            if add_button.get('disabled'):
+            # Check if button is disabled (check both attribute and value)
+            if add_button.get('disabled') is not None:
                 return False
             return True
         
