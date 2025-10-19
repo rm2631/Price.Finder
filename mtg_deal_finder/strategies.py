@@ -9,6 +9,7 @@ cheapest non-foil, blingiest (most expensive foil), etc.
 from abc import ABC, abstractmethod
 from typing import List, Optional
 from mtg_deal_finder.cards import Offer
+from mtg_deal_finder.quality import CardQuality, meets_minimum_quality
 
 
 class SelectionStrategy(ABC):
@@ -18,6 +19,33 @@ class SelectionStrategy(ABC):
     All selection strategies must inherit from this class and implement
     the select method to provide a consistent interface.
     """
+    
+    def __init__(self, min_quality: Optional[CardQuality] = None):
+        """
+        Initialize the strategy with optional minimum quality filter.
+        
+        Args:
+            min_quality: Minimum quality level to consider, or None for no restriction
+        """
+        self.min_quality = min_quality
+    
+    def _filter_by_quality(self, offers: List[Offer]) -> List[Offer]:
+        """
+        Filter offers by minimum quality requirement.
+        
+        Args:
+            offers: List of offers to filter
+        
+        Returns:
+            Filtered list of offers that meet the minimum quality
+        """
+        if self.min_quality is None:
+            return offers
+        
+        return [
+            offer for offer in offers 
+            if meets_minimum_quality(offer.condition, self.min_quality)
+        ]
     
     @abstractmethod
     def select(self, offers: List[Offer]) -> Optional[Offer]:
@@ -61,8 +89,11 @@ class CheapestStrategy(SelectionStrategy):
         if not offers:
             return None
         
+        # Filter by quality first
+        quality_filtered = self._filter_by_quality(offers)
+        
         # Filter only available offers
-        available_offers = [o for o in offers if o.availability]
+        available_offers = [o for o in quality_filtered if o.availability]
         
         if not available_offers:
             return None
@@ -91,8 +122,11 @@ class CheapestFoilStrategy(SelectionStrategy):
         if not offers:
             return None
         
+        # Filter by quality first
+        quality_filtered = self._filter_by_quality(offers)
+        
         # Filter for available foil offers
-        foil_offers = [o for o in offers if o.foil and o.availability]
+        foil_offers = [o for o in quality_filtered if o.foil and o.availability]
         
         if not foil_offers:
             return None
@@ -121,8 +155,11 @@ class CheapestNonFoilStrategy(SelectionStrategy):
         if not offers:
             return None
         
+        # Filter by quality first
+        quality_filtered = self._filter_by_quality(offers)
+        
         # Filter for available non-foil offers
-        non_foil_offers = [o for o in offers if not o.foil and o.availability]
+        non_foil_offers = [o for o in quality_filtered if not o.foil and o.availability]
         
         if not non_foil_offers:
             return None
@@ -151,8 +188,11 @@ class BlingiestStrategy(SelectionStrategy):
         if not offers:
             return None
         
+        # Filter by quality first
+        quality_filtered = self._filter_by_quality(offers)
+        
         # Filter for available foil offers
-        foil_offers = [o for o in offers if o.foil and o.availability]
+        foil_offers = [o for o in quality_filtered if o.foil and o.availability]
         
         if not foil_offers:
             return None
@@ -183,9 +223,12 @@ class BestConditionStrategy(SelectionStrategy):
         if not offers:
             return None
         
+        # Filter by quality first
+        quality_filtered = self._filter_by_quality(offers)
+        
         # Filter for available Near Mint offers
         nm_offers = [
-            o for o in offers 
+            o for o in quality_filtered
             if o.availability and any(
                 nm_cond.lower() in o.condition.lower() 
                 for nm_cond in self.NEAR_MINT_CONDITIONS
@@ -201,22 +244,23 @@ class BestConditionStrategy(SelectionStrategy):
         return "Best Condition (Near Mint)"
 
 
-# Registry of available strategies
+# Registry of available strategies (will be instantiated with min_quality in get_strategy)
 AVAILABLE_STRATEGIES = {
-    "cheapest": CheapestStrategy(),
-    "cheapest-foil": CheapestFoilStrategy(),
-    "cheapest-nonfoil": CheapestNonFoilStrategy(),
-    "blingiest": BlingiestStrategy(),
-    "best-condition": BestConditionStrategy(),
+    "cheapest": CheapestStrategy,
+    "cheapest-foil": CheapestFoilStrategy,
+    "cheapest-nonfoil": CheapestNonFoilStrategy,
+    "blingiest": BlingiestStrategy,
+    "best-condition": BestConditionStrategy,
 }
 
 
-def get_strategy(strategy_name: str) -> SelectionStrategy:
+def get_strategy(strategy_name: str, min_quality: Optional[CardQuality] = None) -> SelectionStrategy:
     """
     Get a selection strategy by name.
     
     Args:
         strategy_name: The name of the strategy (e.g., "cheapest", "cheapest-foil")
+        min_quality: Minimum quality level to apply to all strategies, or None for no restriction
     
     Returns:
         The requested SelectionStrategy instance
@@ -224,13 +268,13 @@ def get_strategy(strategy_name: str) -> SelectionStrategy:
     Raises:
         ValueError: If the strategy name is not recognized
     """
-    strategy = AVAILABLE_STRATEGIES.get(strategy_name.lower())
+    strategy_class = AVAILABLE_STRATEGIES.get(strategy_name.lower())
     
-    if strategy is None:
+    if strategy_class is None:
         available = ", ".join(AVAILABLE_STRATEGIES.keys())
         raise ValueError(
             f"Unknown strategy: {strategy_name}. "
             f"Available strategies: {available}"
         )
     
-    return strategy
+    return strategy_class(min_quality=min_quality)
