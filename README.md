@@ -31,6 +31,15 @@ cd Price.Finder
 pip install -r requirements.txt
 ```
 
+## 🚀 Quick Start
+
+**Launch the web interface:**
+```bash
+streamlit run streamlit_app.py
+```
+
+Your browser will automatically open to the MTG Deal Finder interface. Simply paste your card list and click "Search for Cards"!
+
 ## 💻 Usage
 
 ### Web UI (Recommended)
