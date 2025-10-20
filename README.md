@@ -168,7 +168,7 @@ python -m mtg_deal_finder cards.txt --store facetoface,topdeckhero
 
 ### Caching
 
-Search results are automatically cached for 24 hours to improve performance on repeated searches. To disable caching:
+Search results are automatically cached for 24 hours to improve performance on repeated searches. Cached results older than 24 hours are automatically deleted when a new search is performed, ensuring you always get fresh pricing data. To disable caching:
 
 ```bash
 python -m mtg_deal_finder cards.txt --no-cache

@@ -68,6 +68,9 @@ def load_from_cache(store_name: str, card_name: str) -> Optional[Any]:
     """
     Load search results from cache if available and not expired.
     
+    If the cache exists but is expired (older than the TTL), the expired
+    cache file is automatically deleted to prevent stale data accumulation.
+    
     Args:
         store_name: The name of the store
         card_name: The name of the card
@@ -89,7 +92,11 @@ def load_from_cache(store_name: str, card_name: str) -> Optional[Any]:
         ttl = timedelta(hours=cache_entry.get("ttl_hours", 24))
         
         if datetime.now() - timestamp > ttl:
-            # Cache expired
+            # Cache expired - delete the file
+            try:
+                cache_path.unlink()
+            except Exception as delete_error:
+                print(f"Warning: Failed to delete expired cache: {delete_error}")
             return None
         
         return cache_entry["data"]
