@@ -107,7 +107,10 @@ def main():
     
     store_options = {
         "FaceToFaceGames": "facetoface",
-        "TopDeckHero": "topdeckhero"
+        "TopDeckHero": "topdeckhero",
+        "TopDeckBoucherville": "topdeckboucherville",
+        "TopDeckJoliette": "topdeckjoliette",
+        "MTGJeuxJubes": "mtgjeuxjubes"
     }
     
     selected_stores = st.sidebar.multiselect(
@@ -117,12 +120,15 @@ def main():
         help="Choose which stores to search. More stores = better coverage but longer search time."
     )
     
-    # TopDeckHero discount
-    if "TopDeckHero" in selected_stores:
+    # TopDeck discount
+    topdeck_stores = ["TopDeckHero", "TopDeckBoucherville", "TopDeckJoliette", "MTGJeuxJubes"]
+    has_topdeck = any(store in selected_stores for store in topdeck_stores)
+    
+    if has_topdeck:
         topdeckhero_discount = st.sidebar.checkbox(
-            "Apply TopDeckHero 20% Discount",
+            "Apply TopDeck 20% Discount",
             value=False,
-            help="TopDeckHero offers a 20% discount at checkout. Enable this to apply the discount to prices before comparison."
+            help="TopDeck stores (TopDeckHero, TopDeckBoucherville, TopDeckJoliette, MTGJeuxJubes) offer a 20% discount at checkout. Enable this to apply the discount to prices before comparison."
         )
     else:
         topdeckhero_discount = False
