@@ -19,7 +19,8 @@ from mtg_deal_finder.main import (
     parse_card_line,
     search_all_stores,
     select_best_offers,
-    setup_logging
+    setup_logging,
+    deduplicate_cards
 )
 from mtg_deal_finder.strategies import AVAILABLE_STRATEGIES
 from mtg_deal_finder.quality import CardQuality, QUALITY_OPTIONS
@@ -55,16 +56,7 @@ def parse_card_input(card_text: str, ignore_set: bool = True) -> List[Card]:
     
     # Deduplicate cards if ignore_set is True
     if ignore_set:
-        card_dict = {}
-        for card in cards:
-            key = card.name.lower()
-            if key in card_dict:
-                # Card already exists, add quantity
-                card_dict[key].qty += card.qty
-            else:
-                # New card
-                card_dict[key] = card
-        cards = list(card_dict.values())
+        cards = deduplicate_cards(cards)
     
     return cards
 

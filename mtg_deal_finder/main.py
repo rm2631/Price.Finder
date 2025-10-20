@@ -141,7 +141,7 @@ def deduplicate_cards(cards: List[Card]) -> List[Card]:
             card_dict[key].qty += card.qty
         else:
             # New card
-            card_dict[key] = Card(name=card.name, set=card.set, qty=card.qty)
+            card_dict[key] = card
     
     return list(card_dict.values())
 
