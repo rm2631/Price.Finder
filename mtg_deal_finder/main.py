@@ -103,10 +103,50 @@ def parse_arguments() -> ArgumentParser:
              "This discount is available at checkout and is applied to all TopDeckHero prices."
     )
     
+    parser.add_argument(
+        "--ignore-set",
+        action="store_true",
+        default=True,
+        help="Ignore set information when parsing cards. When enabled, cards with the same name "
+             "but different sets are treated as the same card (default: enabled)."
+    )
+    
+    parser.add_argument(
+        "--no-ignore-set",
+        dest="ignore_set",
+        action="store_false",
+        help="Respect set information when parsing cards. Cards with the same name "
+             "but different sets are treated as separate cards."
+    )
+    
     return parser
 
 
-def parse_card_line(line: str) -> Card:
+def deduplicate_cards(cards: List[Card]) -> List[Card]:
+    """
+    Deduplicate cards by name, combining quantities.
+    
+    Args:
+        cards: List of Card objects
+    
+    Returns:
+        Deduplicated list of Card objects with combined quantities
+    """
+    card_dict = {}
+    
+    for card in cards:
+        key = card.name.lower()
+        if key in card_dict:
+            # Card already exists, add quantity
+            card_dict[key].qty += card.qty
+        else:
+            # New card
+            card_dict[key] = card
+    
+    return list(card_dict.values())
+
+
+def parse_card_line(line: str, ignore_set: bool = True) -> Card:
     """
     Parse a single line from the input file into a Card object.
     
@@ -118,6 +158,7 @@ def parse_card_line(line: str) -> Card:
     
     Args:
         line: A line of text representing a card
+        ignore_set: If True, set information is discarded (default: True)
     
     Returns:
         A Card object
@@ -153,25 +194,30 @@ def parse_card_line(line: str) -> Card:
         set_code = name[start+1:end].strip()
         name = name[:start].strip()
     
+    # If ignore_set is True, discard the set information
+    if ignore_set:
+        set_code = None
+    
     return Card(name=name, set=set_code, qty=qty)
 
 
-def read_cards_from_file(filepath: str) -> List[Card]:
+def read_cards_from_file(filepath: str, ignore_set: bool = True) -> List[Card]:
     """
     Read cards from a text file.
     
     Args:
         filepath: Path to the input file
+        ignore_set: If True, set information is discarded from parsed cards (default: True)
     
     Returns:
-        A list of Card objects
+        A list of Card objects, deduplicated if ignore_set is True
     """
     cards = []
     
     try:
         with open(filepath, 'r') as f:
             for line in f:
-                card = parse_card_line(line)
+                card = parse_card_line(line, ignore_set=ignore_set)
                 if card:
                     cards.append(card)
     except FileNotFoundError:
@@ -180,6 +226,10 @@ def read_cards_from_file(filepath: str) -> List[Card]:
     except Exception as e:
         logging.error(f"Error reading input file: {e}")
         sys.exit(1)
+    
+    # Deduplicate cards if ignore_set is True
+    if ignore_set:
+        cards = deduplicate_cards(cards)
     
     return cards
 
@@ -326,8 +376,10 @@ def main() -> None:
     
     # Read cards from input file
     logger.info(f"Reading cards from: {args.input_file}")
-    cards = read_cards_from_file(args.input_file)
+    cards = read_cards_from_file(args.input_file, ignore_set=args.ignore_set)
     logger.info(f"Found {len(cards)} card(s) to search")
+    if args.ignore_set:
+        logger.info("Set information will be ignored (cards with the same name are treated as identical)")
     
     # Display parsed cards
     for card in cards:

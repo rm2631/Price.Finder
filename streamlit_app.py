@@ -19,7 +19,8 @@ from mtg_deal_finder.main import (
     parse_card_line,
     search_all_stores,
     select_best_offers,
-    setup_logging
+    setup_logging,
+    deduplicate_cards
 )
 from mtg_deal_finder.strategies import AVAILABLE_STRATEGIES
 from mtg_deal_finder.quality import CardQuality, QUALITY_OPTIONS
@@ -35,22 +36,28 @@ st.set_page_config(
 )
 
 
-def parse_card_input(card_text: str) -> List[Card]:
+def parse_card_input(card_text: str, ignore_set: bool = True) -> List[Card]:
     """
     Parse card input from text area.
     
     Args:
         card_text: Multi-line string with one card per line
+        ignore_set: If True, set information is discarded (default: True)
     
     Returns:
-        List of Card objects
+        List of Card objects, deduplicated if ignore_set is True
     """
     cards = []
     for line in card_text.strip().split('\n'):
         if line.strip():
-            card = parse_card_line(line)
+            card = parse_card_line(line, ignore_set=ignore_set)
             if card:
                 cards.append(card)
+    
+    # Deduplicate cards if ignore_set is True
+    if ignore_set:
+        cards = deduplicate_cards(cards)
+    
     return cards
 
 
@@ -162,6 +169,14 @@ def main():
         help="Only show cards at this quality level or better. For example, 'Lightly Played' will show LP, NM, and Mint cards."
     )
     
+    # Card parsing options
+    st.sidebar.subheader("Card Parsing")
+    ignore_set = st.sidebar.checkbox(
+        "Ignore set information",
+        value=True,
+        help="When enabled, cards with the same name but different sets (e.g., 'Lightning Bolt (M11)' and 'Lightning Bolt (M10)') are treated as the same card. This allows finding the cheapest version across all sets."
+    )
+    
     # Cache options
     st.sidebar.subheader("Cache Settings")
     use_cache = st.sidebar.checkbox(
@@ -209,7 +224,7 @@ def main():
         
         # Parse cards
         with st.spinner("Parsing card list..."):
-            cards = parse_card_input(card_input)
+            cards = parse_card_input(card_input, ignore_set=ignore_set)
         
         if not cards:
             st.error("No valid cards found in input.")
