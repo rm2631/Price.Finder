@@ -96,7 +96,7 @@ def load_from_cache(store_name: str, card_name: str) -> Optional[Any]:
             try:
                 cache_path.unlink()
             except Exception as delete_error:
-                print(f"Warning: Failed to delete expired cache: {delete_error}")
+                print(f"Warning: Failed to delete expired cache {cache_path}: {delete_error}")
             return None
         
         return cache_entry["data"]
