@@ -46,13 +46,12 @@ class MTGJeuxJubesScraper(StoreScraper):
         'Damaged': 'Damaged',
     }
     
-    def __init__(self, use_cache: bool = True, apply_discount: bool = False):
+    def __init__(self, use_cache: bool = True):
         """
         Initialize the scraper with a requests session.
         
         Args:
             use_cache: Whether to use caching for search results (default: True)
-            apply_discount: Whether to apply the 20% checkout discount (default: False)
         """
         self.session = requests.Session()
         # Set a user agent to appear as a regular browser
@@ -60,8 +59,6 @@ class MTGJeuxJubesScraper(StoreScraper):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })
         self.use_cache = use_cache
-        self.apply_discount = apply_discount
-        self.discount_rate = 0.20  # 20% discount
     
     def search(self, card: Card, max_pages: int = 2) -> List[Offer]:
         """
@@ -259,10 +256,6 @@ class MTGJeuxJubesScraper(StoreScraper):
             price = float(price_match.group())
         except (ValueError, AttributeError):
             return None
-        
-        # Apply discount if enabled
-        if self.apply_discount:
-            price = price * (1 - self.discount_rate)
         
         # Determine if foil
         # TopDeck stores use a foil icon with class 'ss-foil'
