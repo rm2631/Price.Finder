@@ -1,12 +1,12 @@
 # MTG Deal Finder 💰🃏
 
-A command-line tool that helps Magic: The Gathering players in Canada find the cheapest prices for missing cards across multiple online stores (currently supports FaceToFaceGames and TopDeckHero, with more stores coming soon).
+A command-line tool that helps Magic: The Gathering players in Canada find the cheapest prices for missing cards across multiple online stores (currently supports FaceToFaceGames, TopDeckHero, TopDeckBoucherville, TopDeckJoliette, and MTGJeuxJubes, with more stores coming soon).
 
 You provide a simple text list of cards you need, and the tool searches each store, normalizes results, compares prices, and outputs an Excel spreadsheet with the best available deals.
 
 ## 🚀 Features
 
-- **Scrapes multiple Canadian MTG stores** for card prices (FaceToFaceGames and TopDeckHero)
+- **Scrapes multiple Canadian MTG stores** for card prices (FaceToFaceGames, TopDeckHero, TopDeckBoucherville, TopDeckJoliette, and MTGJeuxJubes)
 - **Automatic caching** — search results are cached for 24 hours to improve performance
 - **Multi-page support** — scrapes up to 2 pages of results per store for better coverage
 - **Modular architecture** — add new stores easily
@@ -79,10 +79,10 @@ python -m mtg_deal_finder <input_file> [options]
 
 Options:
   --out, -o FILE          Output Excel file path (default: results.xlsx)
-  --store STORES          Comma-separated list of stores to search (e.g., facetoface,topdeckhero)
+  --store STORES          Comma-separated list of stores to search (e.g., facetoface,topdeckhero,topdeckboucherville,topdeckjoliette,mtgjeuxjubes)
   --strategy, -s STRATEGY Selection strategy for choosing best card (default: cheapest)
   --min-quality, -q QUAL  Minimum card quality/condition to consider (e.g., nm, lp, mp)
-  --topdeckhero-discount  Apply TopDeckHero's 20% checkout discount to prices
+  --topdeck-discount      Apply TopDeck's 20% checkout discount to prices (applies to TopDeckHero, TopDeckBoucherville, TopDeckJoliette, and MTGJeuxJubes)
   --no-cache              Disable caching of search results
   --debug                 Enable debug logging
 ```
@@ -134,36 +134,39 @@ Example combining strategy with minimum quality:
 python -m mtg_deal_finder cards.txt --strategy cheapest-nonfoil --min-quality lp
 ```
 
-### TopDeckHero Discount
+### TopDeck Discount
 
-TopDeckHero offers a 20% discount at checkout. You can apply this discount to TopDeckHero prices using the `--topdeckhero-discount` flag:
+TopDeck stores (TopDeckHero, TopDeckBoucherville, TopDeckJoliette, and MTGJeuxJubes) offer a 20% discount at checkout. You can apply this discount to TopDeck prices using the `--topdeck-discount` flag:
 
 ```bash
-# Apply the 20% discount to TopDeckHero prices
-python -m mtg_deal_finder cards.txt --topdeckhero-discount
+# Apply the 20% discount to TopDeck prices
+python -m mtg_deal_finder cards.txt --topdeck-discount
 ```
 
-When this flag is enabled, all TopDeckHero prices will be reduced by 20% before comparison, giving you a more accurate view of the final price you'll pay.
+When this flag is enabled, all TopDeck store prices will be reduced by 20% before comparison, giving you a more accurate view of the final price you'll pay.
 
 **Example:**
-- Without discount: TopDeckHero price is $10.00
-- With discount: TopDeckHero price is $8.00 (20% off)
+- Without discount: TopDeck price is $10.00
+- With discount: TopDeck price is $8.00 (20% off)
 
-This makes it easier to compare TopDeckHero prices with other stores that don't offer a checkout discount.
+This makes it easier to compare TopDeck prices with other stores that don't offer a checkout discount.
 
 ### Store Filtering
 
 You can limit your search to specific stores:
 
 ```bash
-# Search only TopDeckHero
-python -m mtg_deal_finder cards.txt --store topdeckhero
+# Search only TopDeckBoucherville
+python -m mtg_deal_finder cards.txt --store topdeckboucherville
 
 # Search only FaceToFaceGames
 python -m mtg_deal_finder cards.txt --store facetoface
 
-# Search both stores (default)
-python -m mtg_deal_finder cards.txt --store facetoface,topdeckhero
+# Search multiple specific stores
+python -m mtg_deal_finder cards.txt --store facetoface,topdeckhero,mtgjeuxjubes
+
+# Search all stores (default)
+python -m mtg_deal_finder cards.txt
 ```
 
 ### Caching
@@ -312,7 +315,6 @@ Keep it simple, modular, and extensible:
 - Include shipping cost estimation
 - Integrate login/cart linking
 - Save results in a local SQLite database
-- Build a web UI using Flask or FastAPI
 
 ## 📜 Legal & Ethical Notes
 
