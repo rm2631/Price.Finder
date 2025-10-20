@@ -44,7 +44,7 @@ def parse_card_input(card_text: str, ignore_set: bool = True) -> List[Card]:
         ignore_set: If True, set information is discarded (default: True)
     
     Returns:
-        List of Card objects
+        List of Card objects, deduplicated if ignore_set is True
     """
     cards = []
     for line in card_text.strip().split('\n'):
@@ -52,6 +52,20 @@ def parse_card_input(card_text: str, ignore_set: bool = True) -> List[Card]:
             card = parse_card_line(line, ignore_set=ignore_set)
             if card:
                 cards.append(card)
+    
+    # Deduplicate cards if ignore_set is True
+    if ignore_set:
+        card_dict = {}
+        for card in cards:
+            key = card.name.lower()
+            if key in card_dict:
+                # Card already exists, add quantity
+                card_dict[key].qty += card.qty
+            else:
+                # New card
+                card_dict[key] = card
+        cards = list(card_dict.values())
+    
     return cards
 
 

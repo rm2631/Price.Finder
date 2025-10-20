@@ -122,6 +122,30 @@ def parse_arguments() -> ArgumentParser:
     return parser
 
 
+def deduplicate_cards(cards: List[Card]) -> List[Card]:
+    """
+    Deduplicate cards by name, combining quantities.
+    
+    Args:
+        cards: List of Card objects
+    
+    Returns:
+        Deduplicated list of Card objects with combined quantities
+    """
+    card_dict = {}
+    
+    for card in cards:
+        key = card.name.lower()
+        if key in card_dict:
+            # Card already exists, add quantity
+            card_dict[key].qty += card.qty
+        else:
+            # New card
+            card_dict[key] = Card(name=card.name, set=card.set, qty=card.qty)
+    
+    return list(card_dict.values())
+
+
 def parse_card_line(line: str, ignore_set: bool = True) -> Card:
     """
     Parse a single line from the input file into a Card object.
@@ -186,7 +210,7 @@ def read_cards_from_file(filepath: str, ignore_set: bool = True) -> List[Card]:
         ignore_set: If True, set information is discarded from parsed cards (default: True)
     
     Returns:
-        A list of Card objects
+        A list of Card objects, deduplicated if ignore_set is True
     """
     cards = []
     
@@ -202,6 +226,10 @@ def read_cards_from_file(filepath: str, ignore_set: bool = True) -> List[Card]:
     except Exception as e:
         logging.error(f"Error reading input file: {e}")
         sys.exit(1)
+    
+    # Deduplicate cards if ignore_set is True
+    if ignore_set:
+        cards = deduplicate_cards(cards)
     
     return cards
 
