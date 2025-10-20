@@ -14,6 +14,9 @@ from typing import List, Dict, Optional
 from mtg_deal_finder.cards import Card, Offer
 from mtg_deal_finder.stores.facetoface import FaceToFaceScraper
 from mtg_deal_finder.stores.topdeckhero import TopDeckHeroScraper
+from mtg_deal_finder.stores.topdeckboucherville import TopDeckBouchervilleScraper
+from mtg_deal_finder.stores.topdeckjoliette import TopDeckJolietteScraper
+from mtg_deal_finder.stores.mtgjeuxjubes import MTGJeuxJubesScraper
 from mtg_deal_finder.strategies import get_strategy, AVAILABLE_STRATEGIES
 from mtg_deal_finder.output import export_to_excel, format_results_table
 from mtg_deal_finder.quality import CardQuality, QUALITY_OPTIONS
@@ -97,10 +100,19 @@ def parse_arguments() -> ArgumentParser:
     )
     
     parser.add_argument(
+        "--topdeck-discount",
+        action="store_true",
+        dest="topdeckhero_discount",
+        help="Apply TopDeck's 20%% checkout discount to prices. "
+             "This discount is available at checkout and is applied to all TopDeck store prices "
+             "(TopDeckHero, TopDeckBoucherville, TopDeckJoliette, MTGJeuxJubes)."
+    )
+    
+    parser.add_argument(
         "--topdeckhero-discount",
         action="store_true",
-        help="Apply TopDeckHero's 20%% checkout discount to prices. "
-             "This discount is available at checkout and is applied to all TopDeckHero prices."
+        help="Deprecated: Use --topdeck-discount instead. "
+             "Apply TopDeck's 20%% checkout discount to prices."
     )
     
     parser.add_argument(
@@ -243,7 +255,7 @@ def search_all_stores(cards: List[Card], store_filter: str = None, use_cache: bo
         cards: A list of Card objects to search for
         store_filter: Optional comma-separated list of store names to search
         use_cache: Whether to use caching for search results (default: True)
-        topdeckhero_discount: Whether to apply TopDeckHero's 20% discount (default: False)
+        topdeckhero_discount: Whether to apply TopDeck's 20% discount (default: False)
     
     Returns:
         A dictionary mapping card names to lists of offers
@@ -254,6 +266,9 @@ def search_all_stores(cards: List[Card], store_filter: str = None, use_cache: bo
     scrapers = {
         "facetoface": FaceToFaceScraper(use_cache=use_cache),
         "topdeckhero": TopDeckHeroScraper(use_cache=use_cache, apply_discount=topdeckhero_discount),
+        "topdeckboucherville": TopDeckBouchervilleScraper(use_cache=use_cache, apply_discount=topdeckhero_discount),
+        "topdeckjoliette": TopDeckJolietteScraper(use_cache=use_cache, apply_discount=topdeckhero_discount),
+        "mtgjeuxjubes": MTGJeuxJubesScraper(use_cache=use_cache, apply_discount=topdeckhero_discount),
     }
     
     # Filter scrapers if specified
@@ -390,7 +405,7 @@ def main() -> None:
     # Search all stores for cards
     logger.info("\nSearching stores...")
     if args.topdeckhero_discount:
-        logger.info("TopDeckHero 20% discount will be applied to prices")
+        logger.info("TopDeck 20% discount will be applied to prices for all TopDeck stores")
     card_offers = search_all_stores(cards, args.store, use_cache=not args.no_cache, 
                                    topdeckhero_discount=args.topdeckhero_discount)
     
