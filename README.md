@@ -182,9 +182,10 @@ python -m mtg_deal_finder cards.txt --no-cache
 The input file supports various formats:
 
 - **Simple card name**: `Lightning Bolt`
-- **Card with set**: `Counterspell (7ED)` or `Counterspell [Seventh Edition]`
+- **Card with set**: `Counterspell (7ED)`
 - **Card with quantity**: `Brainstorm x4` or `4x Brainstorm`
 - **Combined**: `Counterspell (7ED) x2`
+- **Moxfield format**: `1 Choked Estuary (MIC) 169` (leading quantity, set code, and collector number)
 
 ### Output
 

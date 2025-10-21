@@ -166,7 +166,9 @@ def parse_card_line(line: str, ignore_set: bool = True) -> Card:
     - "Card Name"
     - "Card Name (SET)"
     - "Card Name x4"
+    - "4x Card Name"
     - "Card Name (SET) x4"
+    - "1 Card Name (SET) 169" (Moxfield format)
     
     Args:
         line: A line of text representing a card
@@ -184,26 +186,44 @@ def parse_card_line(line: str, ignore_set: bool = True) -> Card:
     set_code = None
     qty = 1
     
-    # Extract quantity (e.g., "x4" or "4x")
-    if " x" in line.lower():
-        parts = line.lower().split(" x")
-        name = parts[0].strip()
-        try:
-            qty = int(parts[1].strip())
-        except (ValueError, IndexError):
-            qty = 1
-    elif line.lower().endswith("x"):
-        # Handle "4x Card Name" format
-        parts = line.split(None, 1)
-        if len(parts) == 2 and parts[0][:-1].isdigit():
-            qty = int(parts[0][:-1])
-            name = parts[1].strip()
+    # Check for Moxfield format first: "QTY Card Name (SET) COLLECTOR_NUMBER"
+    # or simple leading quantity: "QTY Card Name"
+    parts = line.split(None, 1)
+    if len(parts) >= 2 and parts[0].isdigit():
+        # Leading quantity found
+        qty = int(parts[0])
+        name = parts[1].strip()
+    # Check for "4x Card Name" format
+    elif len(parts) >= 2 and parts[0].lower().endswith('x') and parts[0][:-1].isdigit():
+        qty = int(parts[0][:-1])
+        name = parts[1].strip()
+    # Check for "Card Name x4" format
+    elif " x" in line.lower():
+        # Find the position of " x" (case insensitive)
+        lower_line = line.lower()
+        x_pos = lower_line.rfind(" x")
+        # Extract the part before " x" and after " x"
+        name = line[:x_pos].strip()
+        qty_part = line[x_pos+2:].strip()  # Skip " x"
+        # Try to extract quantity, handling potential trailing text like " (SET) 169"
+        # We only want the digits immediately after "x"
+        qty_str = ""
+        for char in qty_part:
+            if char.isdigit():
+                qty_str += char
+            else:
+                break
+        if qty_str:
+            qty = int(qty_str)
     
-    # Extract set code (e.g., "(7ED)")
+    # Extract set code and collector number (e.g., "(7ED)" or "(MIC) 169")
+    # The collector number will be ignored
     if "(" in name and ")" in name:
         start = name.index("(")
         end = name.index(")")
         set_code = name[start+1:end].strip()
+        # Remove everything from the opening parenthesis onward
+        # This handles both "(SET)" and "(SET) COLLECTOR_NUMBER"
         name = name[:start].strip()
     
     # If ignore_set is True, discard the set information
