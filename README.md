@@ -136,14 +136,14 @@ python -m mtg_deal_finder cards.txt --strategy cheapest-nonfoil --min-quality lp
 
 ### TopDeck Discount
 
-TopDeck stores (TopDeckHero, TopDeckBoucherville, TopDeckJoliette, and MTGJeuxJubes) offer a 20% discount at checkout. You can apply this discount to TopDeck prices using the `--topdeck-discount` flag:
+TopDeck stores (TopDeckHero, TopDeckBoucherville, and TopDeckJoliette) offer a 20% discount at checkout. You can apply this discount to TopDeck prices using the `--topdeck-discount` flag:
 
 ```bash
 # Apply the 20% discount to TopDeck prices
 python -m mtg_deal_finder cards.txt --topdeck-discount
 ```
 
-When this flag is enabled, all TopDeck store prices will be reduced by 20% before comparison, giving you a more accurate view of the final price you'll pay.
+When this flag is enabled, all TopDeck store prices (stores with "topdeck" in their domain) will be reduced by 20% before comparison, giving you a more accurate view of the final price you'll pay.
 
 **Example:**
 - Without discount: TopDeck price is $10.00

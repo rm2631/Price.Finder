@@ -104,8 +104,8 @@ def parse_arguments() -> ArgumentParser:
         action="store_true",
         dest="topdeckhero_discount",
         help="Apply TopDeck's 20%% checkout discount to prices. "
-             "This discount is available at checkout and is applied to all TopDeck store prices "
-             "(TopDeckHero, TopDeckBoucherville, TopDeckJoliette, MTGJeuxJubes)."
+             "This discount is available at checkout and is applied to TopDeck store prices "
+             "(TopDeckHero, TopDeckBoucherville, TopDeckJoliette)."
     )
     
     parser.add_argument(
@@ -268,7 +268,7 @@ def search_all_stores(cards: List[Card], store_filter: str = None, use_cache: bo
         "topdeckhero": TopDeckHeroScraper(use_cache=use_cache, apply_discount=topdeckhero_discount),
         "topdeckboucherville": TopDeckBouchervilleScraper(use_cache=use_cache, apply_discount=topdeckhero_discount),
         "topdeckjoliette": TopDeckJolietteScraper(use_cache=use_cache, apply_discount=topdeckhero_discount),
-        "mtgjeuxjubes": MTGJeuxJubesScraper(use_cache=use_cache, apply_discount=topdeckhero_discount),
+        "mtgjeuxjubes": MTGJeuxJubesScraper(use_cache=use_cache),
     }
     
     # Filter scrapers if specified

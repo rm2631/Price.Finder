@@ -121,14 +121,14 @@ def main():
     )
     
     # TopDeck discount
-    topdeck_stores = ["TopDeckHero", "TopDeckBoucherville", "TopDeckJoliette", "MTGJeuxJubes"]
+    topdeck_stores = ["TopDeckHero", "TopDeckBoucherville", "TopDeckJoliette"]
     has_topdeck = any(store in selected_stores for store in topdeck_stores)
     
     if has_topdeck:
         topdeckhero_discount = st.sidebar.checkbox(
             "Apply TopDeck 20% Discount",
             value=False,
-            help="TopDeck stores (TopDeckHero, TopDeckBoucherville, TopDeckJoliette, MTGJeuxJubes) offer a 20% discount at checkout. Enable this to apply the discount to prices before comparison."
+            help="TopDeck stores (TopDeckHero, TopDeckBoucherville, TopDeckJoliette) offer a 20% discount at checkout. Enable this to apply the discount to prices before comparison."
         )
     else:
         topdeckhero_discount = False
