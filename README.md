@@ -190,11 +190,19 @@ The input file supports various formats:
 
 The tool generates an Excel file with the following columns:
 
-| Card | Set | Condition | Foil | Price | Store | URL |
-|------|-----|-----------|------|-------|-------|-----|
-| Lightning Bolt | Masters 25 | Near Mint | False | $2.49 | FaceToFaceGames | https://... |
+| Selected | Query | Card | Set | Condition | Foil | Price | Quantity | Store | URL |
+|----------|-------|------|-----|-----------|------|-------|----------|-------|-----|
+| ✓ | Lightning Bolt | Lightning Bolt | Masters 25 | Played | False | $1.99 | 1 | FaceToFaceGames | https://... |
+| | Lightning Bolt | Lightning Bolt | Premium Deck | Near Mint | False | $2.49 | 1 | FaceToFaceGames | https://... |
+| | Lightning Bolt | Lightning Bolt | The List | Played | False | $1.99 | 0 | FaceToFaceGames | https://... |
 
-The file is automatically sorted by price (cheapest first) and includes clickable URLs to product pages.
+**Key features:**
+- **All offers are included** - The Excel file contains every available offer found across all stores, not just the selected ones
+- **Selected offers are marked** - The "Selected" column shows a ✓ for offers chosen by your selection strategy
+- **Quantity indicates availability** - 1 means in stock, 0 means out of stock
+- **Sorted for easy review** - Results are sorted by card name, selected offers first, then by price
+
+This allows you to review all available options and understand why a particular offer was selected, making it easy to choose an alternative if needed.
 
 
 ## 🏗️ Implementation Strategy
