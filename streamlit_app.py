@@ -61,21 +61,22 @@ def parse_card_input(card_text: str, ignore_set: bool = True) -> List[Card]:
     return cards
 
 
-def create_excel_download(offers: List[Offer]) -> bytes:
+def create_excel_download(offers: List[Offer], selected_offers: List[Offer] = None) -> bytes:
     """
     Create Excel file in memory for download.
     
     Args:
-        offers: List of Offer objects
+        offers: List of all Offer objects
+        selected_offers: Optional list of selected offers to mark
     
     Returns:
         Bytes of Excel file
     """
-    df = create_dataframe(offers)
+    df = create_dataframe(offers, selected_offers)
     
-    # Sort by price
+    # Sort by Query, then Selected (selected first), then Price
     if not df.empty:
-        df = df.sort_values(by="Price", ascending=True)
+        df = df.sort_values(by=["Query", "Selected", "Price"], ascending=[True, False, True])
     
     # Write to bytes buffer
     buffer = io.BytesIO()
@@ -306,8 +307,8 @@ def main():
                 total_cost = sum(offer.price for offer in selected_offers)
                 st.metric("Total Cost", f"${total_cost:.2f}")
             
-            # Results table
-            st.subheader("Best Deals")
+            # Results table (showing only selected offers for UI)
+            st.subheader("Best Deals (Selected)")
             df = create_dataframe(selected_offers)
             df = df.sort_values(by="Price", ascending=True)
             
@@ -323,11 +324,17 @@ def main():
                 }
             )
             
+            # Collect all offers for download
+            all_offers = []
+            for offers in card_offers.values():
+                all_offers.extend(offers)
+            
             # Download button
             st.subheader("📥 Download Results")
-            excel_data = create_excel_download(selected_offers)
+            st.info(f"The Excel file will contain all {total_offers} offers with selected offers marked with a ✓")
+            excel_data = create_excel_download(all_offers, selected_offers)
             st.download_button(
-                label="Download Excel File",
+                label="Download Excel File (All Offers)",
                 data=excel_data,
                 file_name="mtg_deal_finder_results.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

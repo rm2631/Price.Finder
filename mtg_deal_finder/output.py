@@ -11,27 +11,44 @@ import pandas as pd
 from mtg_deal_finder.cards import Offer
 
 
-def create_dataframe(offers: List[Offer]) -> pd.DataFrame:
+def create_dataframe(offers: List[Offer], selected_offers: List[Offer] = None) -> pd.DataFrame:
     """
     Convert a list of offers to a pandas DataFrame.
     
     Args:
         offers: A list of Offer objects
+        selected_offers: Optional list of selected offers to mark in the dataframe
     
     Returns:
         A pandas DataFrame with columns for all offer attributes
     """
     if not offers:
         # Return empty DataFrame with expected columns
-        return pd.DataFrame(columns=["Query", "Card", "Set", "Condition", "Foil", "Price", "Store", "URL"])
+        return pd.DataFrame(columns=["Selected", "Query", "Card", "Set", "Condition", "Foil", "Price", "Quantity", "Store", "URL"])
+    
+    # Create a set of selected offer identifiers for quick lookup
+    # Use a combination of attributes to uniquely identify an offer
+    selected_set = set()
+    if selected_offers:
+        for offer in selected_offers:
+            # Use URL, condition, price, and foil as unique identifier
+            selected_set.add((offer.url, offer.condition, offer.price, offer.foil))
+    
+    # Determine which offers are selected
+    is_selected = []
+    for offer in offers:
+        offer_id = (offer.url, offer.condition, offer.price, offer.foil)
+        is_selected.append("✓" if offer_id in selected_set else "")
     
     data = {
+        "Selected": is_selected,
         "Query": [offer.query for offer in offers],
         "Card": [offer.card for offer in offers],
         "Set": [offer.set for offer in offers],
         "Condition": [offer.condition for offer in offers],
         "Foil": [offer.foil for offer in offers],
         "Price": [offer.price for offer in offers],
+        "Quantity": [1 if offer.availability else 0 for offer in offers],
         "Store": [offer.store for offer in offers],
         "URL": [offer.url for offer in offers],
     }
@@ -39,13 +56,14 @@ def create_dataframe(offers: List[Offer]) -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
-def export_to_excel(offers: List[Offer], output_path: str) -> None:
+def export_to_excel(offers: List[Offer], output_path: str, selected_offers: List[Offer] = None) -> None:
     """
     Export offers to an Excel file.
     
     Args:
-        offers: A list of Offer objects
+        offers: A list of all Offer objects
         output_path: The path where the Excel file should be saved
+        selected_offers: Optional list of selected offers to mark in the output
     
     Raises:
         ValueError: If output_path is invalid
@@ -64,11 +82,11 @@ def export_to_excel(offers: List[Offer], output_path: str) -> None:
         path = path.with_suffix('.xlsx')
     
     # Create DataFrame
-    df = create_dataframe(offers)
+    df = create_dataframe(offers, selected_offers)
     
-    # Sort by price (cheapest first)
+    # Sort by Query, then Selected (selected first), then Price
     if not df.empty:
-        df = df.sort_values(by="Price", ascending=True)
+        df = df.sort_values(by=["Query", "Selected", "Price"], ascending=[True, False, True])
     
     # Export to Excel
     try:
@@ -77,12 +95,13 @@ def export_to_excel(offers: List[Offer], output_path: str) -> None:
         raise IOError(f"Failed to write Excel file: {e}")
 
 
-def format_results_table(offers: List[Offer]) -> str:
+def format_results_table(offers: List[Offer], selected_offers: List[Offer] = None) -> str:
     """
     Format offers as a text table for console output.
     
     Args:
         offers: A list of Offer objects
+        selected_offers: Optional list of selected offers to mark in the table
     
     Returns:
         A formatted string representation of the offers
@@ -90,9 +109,9 @@ def format_results_table(offers: List[Offer]) -> str:
     if not offers:
         return "No offers found."
     
-    df = create_dataframe(offers)
+    df = create_dataframe(offers, selected_offers)
     
-    # Sort by price
-    df = df.sort_values(by="Price", ascending=True)
+    # Sort by Query, then Selected (selected first), then Price
+    df = df.sort_values(by=["Query", "Selected", "Price"], ascending=[True, False, True])
     
     return df.to_string(index=False)
