@@ -186,6 +186,7 @@ The input file supports various formats:
 - **Card with quantity**: `Brainstorm x4` or `4x Brainstorm`
 - **Combined**: `Counterspell (7ED) x2`
 - **Moxfield format**: `1 Choked Estuary (MIC) 169` (leading quantity, set code, and collector number)
+- **Comments**: Lines starting with `#` are treated as comments and ignored
 
 ### Output
 

@@ -170,15 +170,17 @@ def parse_card_line(line: str, ignore_set: bool = True) -> Card:
     - "Card Name (SET) x4"
     - "1 Card Name (SET) 169" (Moxfield format)
     
+    Lines starting with # are treated as comments and ignored.
+    
     Args:
         line: A line of text representing a card
         ignore_set: If True, set information is discarded (default: True)
     
     Returns:
-        A Card object
+        A Card object, or None if the line is empty or a comment
     """
     line = line.strip()
-    if not line:
+    if not line or line.startswith('#'):
         return None
     
     # Default values
