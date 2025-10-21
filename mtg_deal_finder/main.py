@@ -434,7 +434,7 @@ def main() -> None:
         logger.warning("No suitable offers selected. Exiting.")
         return
     
-    # Display results
+    # Display results (only selected offers in console for brevity)
     logger.info("\n" + "=" * 50)
     logger.info("SELECTED BEST DEALS:")
     logger.info("=" * 50)
@@ -444,10 +444,16 @@ def main() -> None:
     total_cost = sum(offer.price for offer in selected_offers)
     logger.info(f"\nTotal cost: ${total_cost:.2f}")
     
-    # Export to Excel
+    # Collect all offers for Excel export
+    all_offers = []
+    for offers in card_offers.values():
+        all_offers.extend(offers)
+    
+    # Export all offers to Excel with selected ones marked
     try:
-        export_to_excel(selected_offers, args.out)
+        export_to_excel(all_offers, args.out, selected_offers)
         logger.info(f"\nResults exported to: {args.out}")
+        logger.info(f"Excel file contains all {len(all_offers)} offers with selected offers marked")
     except Exception as e:
         logger.error(f"Error exporting to Excel: {e}")
         return
