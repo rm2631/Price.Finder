@@ -19,10 +19,12 @@ class Card:
         name: The name of the card (e.g., "Lightning Bolt")
         set: The set code or name (optional, e.g., "M11" or "Magic 2011")
         qty: The quantity needed (default: 1)
+        card_number: The collector number (optional, e.g., "394")
     """
     name: str
     set: Optional[str] = None
     qty: int = 1
+    card_number: Optional[str] = None
     
     def __post_init__(self):
         """Validate card data after initialization."""

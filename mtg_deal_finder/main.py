@@ -131,6 +131,22 @@ def parse_arguments() -> ArgumentParser:
              "but different sets are treated as separate cards."
     )
     
+    parser.add_argument(
+        "--ignore-card-number",
+        action="store_true",
+        default=True,
+        help="Ignore card number when parsing cards. When enabled, card numbers from formats like "
+             "'(LTR) 394' are extracted but not used for filtering (default: enabled)."
+    )
+    
+    parser.add_argument(
+        "--no-ignore-card-number",
+        dest="ignore_card_number",
+        action="store_false",
+        help="Use card number when filtering results. Cards with the same name and set "
+             "but different card numbers may be treated separately."
+    )
+    
     return parser
 
 
@@ -158,7 +174,7 @@ def deduplicate_cards(cards: List[Card]) -> List[Card]:
     return list(card_dict.values())
 
 
-def parse_card_line(line: str, ignore_set: bool = True) -> Card:
+def parse_card_line(line: str, ignore_set: bool = True, ignore_card_number: bool = True) -> Card:
     """
     Parse a single line from the input file into a Card object.
     
@@ -168,13 +184,14 @@ def parse_card_line(line: str, ignore_set: bool = True) -> Card:
     - "Card Name x4"
     - "4x Card Name"
     - "Card Name (SET) x4"
-    - "1 Card Name (SET) 169" (Moxfield format)
+    - "1 Card Name (SET) 169" (Moxfield format with collector number)
     
     Lines starting with # are treated as comments and ignored.
     
     Args:
         line: A line of text representing a card
         ignore_set: If True, set information is discarded (default: True)
+        ignore_card_number: If True, card number is discarded (default: True)
     
     Returns:
         A Card object, or None if the line is empty or a comment
@@ -186,6 +203,7 @@ def parse_card_line(line: str, ignore_set: bool = True) -> Card:
     # Default values
     name = line
     set_code = None
+    card_number = None
     qty = 1
     
     # Check for Moxfield format first: "QTY Card Name (SET) COLLECTOR_NUMBER"
@@ -219,29 +237,47 @@ def parse_card_line(line: str, ignore_set: bool = True) -> Card:
             qty = int(qty_str)
     
     # Extract set code and collector number (e.g., "(7ED)" or "(MIC) 169")
-    # The collector number will be ignored
     if "(" in name and ")" in name:
         start = name.index("(")
         end = name.index(")")
         set_code = name[start+1:end].strip()
-        # Remove everything from the opening parenthesis onward
-        # This handles both "(SET)" and "(SET) COLLECTOR_NUMBER"
+        
+        # Extract the remaining text after the closing parenthesis
+        # This might contain the collector number
+        remaining = name[end+1:].strip()
         name = name[:start].strip()
+        
+        # Check if remaining text contains a collector number
+        # Collector numbers are typically numeric or alphanumeric (e.g., "394", "123a")
+        if remaining:
+            # Extract the first token which should be the collector number
+            collector_parts = remaining.split(None, 1)
+            if collector_parts and collector_parts[0]:
+                # Collector number can be numeric or alphanumeric
+                potential_number = collector_parts[0]
+                # Basic validation: should start with a digit or be alphanumeric
+                if potential_number and (potential_number[0].isdigit() or potential_number.replace('a', '').replace('b', '').isdigit()):
+                    card_number = potential_number
     
     # If ignore_set is True, discard the set information
     if ignore_set:
         set_code = None
     
-    return Card(name=name, set=set_code, qty=qty)
+    # If ignore_card_number is True, discard the card number
+    if ignore_card_number:
+        card_number = None
+    
+    return Card(name=name, set=set_code, qty=qty, card_number=card_number)
 
 
-def read_cards_from_file(filepath: str, ignore_set: bool = True) -> List[Card]:
+def read_cards_from_file(filepath: str, ignore_set: bool = True, ignore_card_number: bool = True) -> List[Card]:
     """
     Read cards from a text file.
     
     Args:
         filepath: Path to the input file
         ignore_set: If True, set information is discarded from parsed cards (default: True)
+        ignore_card_number: If True, card number is discarded from parsed cards (default: True)
     
     Returns:
         A list of Card objects, deduplicated if ignore_set is True
@@ -251,7 +287,7 @@ def read_cards_from_file(filepath: str, ignore_set: bool = True) -> List[Card]:
     try:
         with open(filepath, 'r') as f:
             for line in f:
-                card = parse_card_line(line, ignore_set=ignore_set)
+                card = parse_card_line(line, ignore_set=ignore_set, ignore_card_number=ignore_card_number)
                 if card:
                     cards.append(card)
     except FileNotFoundError:
@@ -413,16 +449,19 @@ def main() -> None:
     
     # Read cards from input file
     logger.info(f"Reading cards from: {args.input_file}")
-    cards = read_cards_from_file(args.input_file, ignore_set=args.ignore_set)
+    cards = read_cards_from_file(args.input_file, ignore_set=args.ignore_set, ignore_card_number=args.ignore_card_number)
     logger.info(f"Found {len(cards)} card(s) to search")
     if args.ignore_set:
         logger.info("Set information will be ignored (cards with the same name are treated as identical)")
+    if args.ignore_card_number:
+        logger.info("Card numbers will be ignored during filtering")
     
     # Display parsed cards
     for card in cards:
         set_info = f" ({card.set})" if card.set else ""
+        card_num_info = f" {card.card_number}" if card.card_number else ""
         qty_info = f" x{card.qty}" if card.qty > 1 else ""
-        logger.debug(f"  - {card.name}{set_info}{qty_info}")
+        logger.debug(f"  - {card.name}{set_info}{card_num_info}{qty_info}")
     
     # Search all stores for cards
     logger.info("\nSearching stores...")

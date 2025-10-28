@@ -36,13 +36,14 @@ st.set_page_config(
 )
 
 
-def parse_card_input(card_text: str, ignore_set: bool = True) -> List[Card]:
+def parse_card_input(card_text: str, ignore_set: bool = True, ignore_card_number: bool = True) -> List[Card]:
     """
     Parse card input from text area.
 
     Args:
         card_text: Multi-line string with one card per line
         ignore_set: If True, set information is discarded (default: True)
+        ignore_card_number: If True, card number is discarded (default: True)
 
     Returns:
         List of Card objects, deduplicated if ignore_set is True
@@ -50,7 +51,7 @@ def parse_card_input(card_text: str, ignore_set: bool = True) -> List[Card]:
     cards = []
     for line in card_text.strip().split("\n"):
         if line.strip():
-            card = parse_card_line(line, ignore_set=ignore_set)
+            card = parse_card_line(line, ignore_set=ignore_set, ignore_card_number=ignore_card_number)
             if card:
                 cards.append(card)
 
@@ -190,6 +191,12 @@ def main():
         value=True,
         help="When enabled, cards with the same name but different sets (e.g., 'Lightning Bolt (M11)' and 'Lightning Bolt (M10)') are treated as the same card. This allows finding the cheapest version across all sets.",
     )
+    
+    ignore_card_number = st.sidebar.checkbox(
+        "Ignore card number",
+        value=True,
+        help="When enabled, card numbers from formats like '(LTR) 394' are parsed but not used for filtering. This allows finding any printing of the card regardless of collector number.",
+    )
 
     # Cache options
     st.sidebar.subheader("Cache Settings")
@@ -208,6 +215,7 @@ def main():
     - With set: `Counterspell (7ED)`
     - With quantity: `Brainstorm x4` or `4x Brainstorm` or `4 Brainstorm`
     - Combined: `1 Counterspell (7ED)`
+    - With card number: `1 Aragorn and Arwen, Wed (LTR) 394`
     """
     )
 
@@ -242,7 +250,7 @@ def main():
 
         # Parse cards
         with st.spinner("Parsing card list..."):
-            cards = parse_card_input(card_input, ignore_set=ignore_set)
+            cards = parse_card_input(card_input, ignore_set=ignore_set, ignore_card_number=ignore_card_number)
 
         if not cards:
             st.error("No valid cards found in input.")
