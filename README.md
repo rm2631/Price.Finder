@@ -83,10 +83,6 @@ Options:
   --strategy, -s STRATEGY Selection strategy for choosing best card (default: cheapest)
   --min-quality, -q QUAL  Minimum card quality/condition to consider (e.g., nm, lp, mp)
   --topdeck-discount      Apply TopDeck's 20% checkout discount to prices (applies to TopDeckHero, TopDeckBoucherville, TopDeckJoliette, and MTGJeuxJubes)
-  --ignore-set            Ignore set information when parsing cards (default: enabled)
-  --no-ignore-set         Respect set information when parsing cards
-  --ignore-card-number    Ignore card number when parsing cards (default: enabled)
-  --no-ignore-card-number Use card number when filtering results
   --no-cache              Disable caching of search results
   --debug                 Enable debug logging
 ```
@@ -186,31 +182,15 @@ python -m mtg_deal_finder cards.txt --no-cache
 The input file supports various formats:
 
 - **Simple card name**: `Lightning Bolt`
-- **Card with set**: `Counterspell (7ED)`
+- **Card with set**: `Counterspell (7ED)` (set code is parsed but not used for filtering)
 - **Card with quantity**: `Brainstorm x4` or `4x Brainstorm`
 - **Combined**: `Counterspell (7ED) x2`
 - **Moxfield format**: `1 Choked Estuary (MIC) 169` (leading quantity, set code, and collector number)
-- **With card number**: `1 Aragorn and Arwen, Wed (LTR) 394` (card number 394 is extracted but ignored by default)
+- **With card number**: `1 Aragorn and Arwen, Wed (LTR) 394` (card number 394 is parsed but not used for filtering)
 - **Comments**: Lines starting with `#` are treated as comments and ignored
 
-#### Card Number Handling
-
-By default, card numbers (collector numbers) are parsed from the input but **ignored during search**. This means:
-- Input: `1 Aragorn and Arwen, Wed (LTR) 394`
-- Default behavior: Searches for any printing of "Aragorn and Arwen, Wed" from set LTR (or any set if --ignore-set is used)
-- With `--no-ignore-card-number`: Could be used to filter results to only card number 394 (feature available for future store implementations)
-
-To control card number parsing:
-```bash
-# Default: Parse card numbers but ignore them during filtering
-python -m mtg_deal_finder cards.txt
-
-# Explicitly ignore card numbers (same as default)
-python -m mtg_deal_finder cards.txt --ignore-card-number
-
-# Enable card number filtering (for future use)
-python -m mtg_deal_finder cards.txt --no-ignore-card-number
-```
+**Note on Set Information and Card Numbers:**
+While the tool supports parsing set codes (e.g., `(7ED)`) and card numbers (e.g., `394`) from various input formats, **these are always ignored during searches**. The tool will find the cheapest available printing of the card regardless of set or collector number. This ensures you get the best price across all available versions of the card.
 
 ### Output
 

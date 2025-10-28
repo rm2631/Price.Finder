@@ -39,15 +39,20 @@ st.set_page_config(
 def parse_card_input(card_text: str, ignore_set: bool = True, ignore_card_number: bool = True) -> List[Card]:
     """
     Parse card input from text area.
+    
+    Note: Set information and card numbers are always ignored during searches.
 
     Args:
         card_text: Multi-line string with one card per line
-        ignore_set: If True, set information is discarded (default: True)
-        ignore_card_number: If True, card number is discarded (default: True)
+        ignore_set: Always True - set information is always ignored (parameter kept for compatibility)
+        ignore_card_number: Always True - card numbers are always ignored (parameter kept for compatibility)
 
     Returns:
-        List of Card objects, deduplicated if ignore_set is True
+        List of Card objects, deduplicated
     """
+    # Always ignore set and card number
+    ignore_set = True
+    ignore_card_number = True
     cards = []
     for line in card_text.strip().split("\n"):
         if line.strip():
@@ -55,9 +60,8 @@ def parse_card_input(card_text: str, ignore_set: bool = True, ignore_card_number
             if card:
                 cards.append(card)
 
-    # Deduplicate cards if ignore_set is True
-    if ignore_set:
-        cards = deduplicate_cards(cards)
+    # Always deduplicate cards since set information is always ignored
+    cards = deduplicate_cards(cards)
 
     return cards
 
@@ -184,20 +188,6 @@ def main():
         help="Only show cards at this quality level or better. For example, 'Lightly Played' will show LP, NM, and Mint cards.",
     )
 
-    # Card parsing options
-    st.sidebar.subheader("Card Parsing")
-    ignore_set = st.sidebar.checkbox(
-        "Ignore set information",
-        value=True,
-        help="When enabled, cards with the same name but different sets (e.g., 'Lightning Bolt (M11)' and 'Lightning Bolt (M10)') are treated as the same card. This allows finding the cheapest version across all sets.",
-    )
-    
-    ignore_card_number = st.sidebar.checkbox(
-        "Ignore card number",
-        value=True,
-        help="When enabled, card numbers from formats like '(LTR) 394' are parsed but not used for filtering. This allows finding any printing of the card regardless of collector number.",
-    )
-
     # Cache options
     st.sidebar.subheader("Cache Settings")
     use_cache = st.sidebar.checkbox(
@@ -250,7 +240,7 @@ def main():
 
         # Parse cards
         with st.spinner("Parsing card list..."):
-            cards = parse_card_input(card_input, ignore_set=ignore_set, ignore_card_number=ignore_card_number)
+            cards = parse_card_input(card_input)
 
         if not cards:
             st.error("No valid cards found in input.")
