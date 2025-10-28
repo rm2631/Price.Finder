@@ -83,6 +83,10 @@ Options:
   --strategy, -s STRATEGY Selection strategy for choosing best card (default: cheapest)
   --min-quality, -q QUAL  Minimum card quality/condition to consider (e.g., nm, lp, mp)
   --topdeck-discount      Apply TopDeck's 20% checkout discount to prices (applies to TopDeckHero, TopDeckBoucherville, TopDeckJoliette, and MTGJeuxJubes)
+  --ignore-set            Ignore set information when parsing cards (default: enabled)
+  --no-ignore-set         Respect set information when parsing cards
+  --ignore-card-number    Ignore card number when parsing cards (default: enabled)
+  --no-ignore-card-number Use card number when filtering results
   --no-cache              Disable caching of search results
   --debug                 Enable debug logging
 ```
@@ -186,7 +190,27 @@ The input file supports various formats:
 - **Card with quantity**: `Brainstorm x4` or `4x Brainstorm`
 - **Combined**: `Counterspell (7ED) x2`
 - **Moxfield format**: `1 Choked Estuary (MIC) 169` (leading quantity, set code, and collector number)
+- **With card number**: `1 Aragorn and Arwen, Wed (LTR) 394` (card number 394 is extracted but ignored by default)
 - **Comments**: Lines starting with `#` are treated as comments and ignored
+
+#### Card Number Handling
+
+By default, card numbers (collector numbers) are parsed from the input but **ignored during search**. This means:
+- Input: `1 Aragorn and Arwen, Wed (LTR) 394`
+- Default behavior: Searches for any printing of "Aragorn and Arwen, Wed" from set LTR (or any set if --ignore-set is used)
+- With `--no-ignore-card-number`: Could be used to filter results to only card number 394 (feature available for future store implementations)
+
+To control card number parsing:
+```bash
+# Default: Parse card numbers but ignore them during filtering
+python -m mtg_deal_finder cards.txt
+
+# Explicitly ignore card numbers (same as default)
+python -m mtg_deal_finder cards.txt --ignore-card-number
+
+# Enable card number filtering (for future use)
+python -m mtg_deal_finder cards.txt --no-ignore-card-number
+```
 
 ### Output
 
