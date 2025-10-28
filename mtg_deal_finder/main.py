@@ -115,38 +115,6 @@ def parse_arguments() -> ArgumentParser:
              "Apply TopDeck's 20%% checkout discount to prices."
     )
     
-    parser.add_argument(
-        "--ignore-set",
-        action="store_true",
-        default=True,
-        help="Ignore set information when parsing cards. When enabled, cards with the same name "
-             "but different sets are treated as the same card (default: enabled)."
-    )
-    
-    parser.add_argument(
-        "--no-ignore-set",
-        dest="ignore_set",
-        action="store_false",
-        help="Respect set information when parsing cards. Cards with the same name "
-             "but different sets are treated as separate cards."
-    )
-    
-    parser.add_argument(
-        "--ignore-card-number",
-        action="store_true",
-        default=True,
-        help="Ignore card number when parsing cards. When enabled, card numbers from formats like "
-             "'(LTR) 394' are extracted but not used for filtering (default: enabled)."
-    )
-    
-    parser.add_argument(
-        "--no-ignore-card-number",
-        dest="ignore_card_number",
-        action="store_false",
-        help="Use card number when filtering results. Cards with the same name and set "
-             "but different card numbers may be treated separately."
-    )
-    
     return parser
 
 
@@ -188,14 +156,20 @@ def parse_card_line(line: str, ignore_set: bool = True, ignore_card_number: bool
     
     Lines starting with # are treated as comments and ignored.
     
+    Note: Set information and card numbers are always ignored during searches.
+    While the format is supported for compatibility, these fields are not used for filtering.
+    
     Args:
         line: A line of text representing a card
-        ignore_set: If True, set information is discarded (default: True)
-        ignore_card_number: If True, card number is discarded (default: True)
+        ignore_set: Always True - set information is always ignored (parameter kept for compatibility)
+        ignore_card_number: Always True - card numbers are always ignored (parameter kept for compatibility)
     
     Returns:
         A Card object, or None if the line is empty or a comment
     """
+    # Always ignore set and card number
+    ignore_set = True
+    ignore_card_number = True
     line = line.strip()
     if not line or line.startswith('#'):
         return None
@@ -274,14 +248,19 @@ def read_cards_from_file(filepath: str, ignore_set: bool = True, ignore_card_num
     """
     Read cards from a text file.
     
+    Note: Set information and card numbers are always ignored during searches.
+    
     Args:
         filepath: Path to the input file
-        ignore_set: If True, set information is discarded from parsed cards (default: True)
-        ignore_card_number: If True, card number is discarded from parsed cards (default: True)
+        ignore_set: Always True - set information is always ignored (parameter kept for compatibility)
+        ignore_card_number: Always True - card numbers are always ignored (parameter kept for compatibility)
     
     Returns:
-        A list of Card objects, deduplicated if ignore_set is True
+        A list of Card objects, deduplicated
     """
+    # Always ignore set and card number
+    ignore_set = True
+    ignore_card_number = True
     cards = []
     
     try:
@@ -297,9 +276,8 @@ def read_cards_from_file(filepath: str, ignore_set: bool = True, ignore_card_num
         logging.error(f"Error reading input file: {e}")
         sys.exit(1)
     
-    # Deduplicate cards if ignore_set is True
-    if ignore_set:
-        cards = deduplicate_cards(cards)
+    # Always deduplicate cards since set information is always ignored
+    cards = deduplicate_cards(cards)
     
     return cards
 
@@ -449,12 +427,9 @@ def main() -> None:
     
     # Read cards from input file
     logger.info(f"Reading cards from: {args.input_file}")
-    cards = read_cards_from_file(args.input_file, ignore_set=args.ignore_set, ignore_card_number=args.ignore_card_number)
+    cards = read_cards_from_file(args.input_file)
     logger.info(f"Found {len(cards)} card(s) to search")
-    if args.ignore_set:
-        logger.info("Set information will be ignored (cards with the same name are treated as identical)")
-    if args.ignore_card_number:
-        logger.info("Card numbers will be ignored during filtering")
+    logger.info("Set information and card numbers are ignored (cards with the same name are treated as identical)")
     
     # Display parsed cards
     for card in cards:
