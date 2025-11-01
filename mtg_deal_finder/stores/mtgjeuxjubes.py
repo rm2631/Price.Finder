@@ -260,6 +260,12 @@ class MTGJeuxJubesScraper(StoreScraper):
         # Determine if foil
         # TopDeck stores use a foil icon with class 'ss-foil'
         is_foil = variant.find('i', class_='ss-foil') is not None
+        # Fallback: check if "Foil" appears in the product name as a marker
+        # (e.g., "Card Name - Foil", "Card Name [Foil]", "Card Name Foil")
+        if not is_foil:
+            foil_pattern = r'(\[foil\]|\(foil\)|[\s\-]foil\b)'
+            if re.search(foil_pattern, product_name, re.IGNORECASE):
+                is_foil = True
         
         # Clean up card name
         clean_name = self._clean_card_name(product_name)
