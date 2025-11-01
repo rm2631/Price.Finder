@@ -47,9 +47,9 @@ class MTGJeuxJubesScraper(StoreScraper):
     }
     
     # Regex pattern for detecting foil markers in product names
-    # Matches: [Foil], (Foil), - Foil, Card Name Foil
-    # Avoids false positives like "Foil Burst" (where Foil is part of the card name)
-    FOIL_PATTERN = re.compile(r'(\[foil\]|\(foil\)|[\s-]foil\b)', re.IGNORECASE)
+    # Matches: [Foil], (Foil) anywhere, or "- Foil" / " Foil" at the end of the string
+    # Avoids false positives like "Foil Burst" or "Lightning Foil Bolt"
+    FOIL_PATTERN = re.compile(r'(\[foil\]|\(foil\)|([\s-]foil)$)', re.IGNORECASE)
     
     def __init__(self, use_cache: bool = True):
         """
