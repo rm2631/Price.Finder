@@ -211,7 +211,11 @@ class TopDeckBouchervilleScraper(StoreScraper):
         is_available = 'in-stock' in variant.get('class', [])
         
         # Extract variant description (condition, language)
+        # Try 'variant-description' first, fall back to 'variant-short-info'
         desc_elem = variant.find('span', class_='variant-description')
+        if not desc_elem:
+            desc_elem = variant.find('span', class_='variant-short-info')
+        
         if not desc_elem:
             return None
         
