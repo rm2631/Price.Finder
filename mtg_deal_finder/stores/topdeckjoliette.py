@@ -49,7 +49,7 @@ class TopDeckJolietteScraper(StoreScraper):
     # Regex pattern for detecting foil markers in product names
     # Matches: [Foil], (Foil), - Foil, Card Name Foil
     # Avoids false positives like "Foil Burst" (where Foil is part of the card name)
-    FOIL_PATTERN = re.compile(r'(\[foil\]|\(foil\)|[\s\-]foil\b)', re.IGNORECASE)
+    FOIL_PATTERN = re.compile(r'(\[foil\]|\(foil\)|[\s-]foil\b)', re.IGNORECASE)
     
     def __init__(self, use_cache: bool = True, apply_discount: bool = False):
         """
