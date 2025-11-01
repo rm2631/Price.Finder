@@ -46,6 +46,11 @@ class MTGJeuxJubesScraper(StoreScraper):
         'Damaged': 'Damaged',
     }
     
+    # Regex pattern for detecting foil markers in product names
+    # Matches: [Foil], (Foil), - Foil, Card Name Foil
+    # Avoids false positives like "Foil Burst" (where Foil is part of the card name)
+    FOIL_PATTERN = re.compile(r'(\[foil\]|\(foil\)|[\s\-]foil\b)', re.IGNORECASE)
+    
     def __init__(self, use_cache: bool = True):
         """
         Initialize the scraper with a requests session.
@@ -262,10 +267,8 @@ class MTGJeuxJubesScraper(StoreScraper):
         is_foil = variant.find('i', class_='ss-foil') is not None
         # Fallback: check if "Foil" appears in the product name as a marker
         # (e.g., "Card Name - Foil", "Card Name [Foil]", "Card Name Foil")
-        if not is_foil:
-            foil_pattern = r'(\[foil\]|\(foil\)|[\s\-]foil\b)'
-            if re.search(foil_pattern, product_name, re.IGNORECASE):
-                is_foil = True
+        if not is_foil and self.FOIL_PATTERN.search(product_name):
+            is_foil = True
         
         # Clean up card name
         clean_name = self._clean_card_name(product_name)
