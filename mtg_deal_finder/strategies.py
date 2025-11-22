@@ -287,6 +287,128 @@ class FoilFirstCheapestStrategy(SelectionStrategy):
         return "Foil First, Cheapest"
 
 
+class FoilWithin50CentsStrategy(SelectionStrategy):
+    """
+    Strategy that picks foil if the price difference between the cheapest foil
+    and the cheapest non-foil is within 50 cents. Otherwise, picks the non-foil.
+    
+    Note: If the foil is cheaper than the non-foil, the foil will always be selected.
+    """
+    
+    def select(self, offers: List[Offer]) -> Optional[Offer]:
+        """
+        Select foil if within 50 cents of non-foil price, otherwise select non-foil.
+        
+        The strategy compares the cheapest foil to the cheapest non-foil. If the foil
+        costs 50 cents or less more than the non-foil (or is actually cheaper), the
+        foil is selected. Otherwise, the non-foil is selected.
+        
+        Args:
+            offers: A list of Offer objects
+        
+        Returns:
+            Foil offer if within 50 cents of non-foil, otherwise non-foil offer,
+            or None if no offers are available
+        """
+        if not offers:
+            return None
+        
+        # Filter by quality first
+        quality_filtered = self._filter_by_quality(offers)
+        
+        # Filter only available offers
+        available_offers = [o for o in quality_filtered if o.availability]
+        
+        if not available_offers:
+            return None
+        
+        # Separate foil and non-foil offers
+        foil_offers = [o for o in available_offers if o.foil]
+        non_foil_offers = [o for o in available_offers if not o.foil]
+        
+        # If we don't have both types, return what we have
+        if not foil_offers and non_foil_offers:
+            return min(non_foil_offers, key=lambda x: x.price)
+        if foil_offers and not non_foil_offers:
+            return min(foil_offers, key=lambda x: x.price)
+        if not foil_offers and not non_foil_offers:
+            return None
+        
+        # Find cheapest of each type
+        cheapest_foil = min(foil_offers, key=lambda x: x.price)
+        cheapest_non_foil = min(non_foil_offers, key=lambda x: x.price)
+        
+        # If foil is within 50 cents of non-foil, pick foil; otherwise pick non-foil
+        if cheapest_foil.price - cheapest_non_foil.price <= 0.50:
+            return cheapest_foil
+        else:
+            return cheapest_non_foil
+    
+    def get_name(self) -> str:
+        return "Foil if Within 50 Cents"
+
+
+class FoilWithin1DollarStrategy(SelectionStrategy):
+    """
+    Strategy that picks foil if the price difference between the cheapest foil
+    and the cheapest non-foil is within $1. Otherwise, picks the non-foil.
+    
+    Note: If the foil is cheaper than the non-foil, the foil will always be selected.
+    """
+    
+    def select(self, offers: List[Offer]) -> Optional[Offer]:
+        """
+        Select foil if within $1 of non-foil price, otherwise select non-foil.
+        
+        The strategy compares the cheapest foil to the cheapest non-foil. If the foil
+        costs $1 or less more than the non-foil (or is actually cheaper), the foil is
+        selected. Otherwise, the non-foil is selected.
+        
+        Args:
+            offers: A list of Offer objects
+        
+        Returns:
+            Foil offer if within $1 of non-foil, otherwise non-foil offer,
+            or None if no offers are available
+        """
+        if not offers:
+            return None
+        
+        # Filter by quality first
+        quality_filtered = self._filter_by_quality(offers)
+        
+        # Filter only available offers
+        available_offers = [o for o in quality_filtered if o.availability]
+        
+        if not available_offers:
+            return None
+        
+        # Separate foil and non-foil offers
+        foil_offers = [o for o in available_offers if o.foil]
+        non_foil_offers = [o for o in available_offers if not o.foil]
+        
+        # If we don't have both types, return what we have
+        if not foil_offers and non_foil_offers:
+            return min(non_foil_offers, key=lambda x: x.price)
+        if foil_offers and not non_foil_offers:
+            return min(foil_offers, key=lambda x: x.price)
+        if not foil_offers and not non_foil_offers:
+            return None
+        
+        # Find cheapest of each type
+        cheapest_foil = min(foil_offers, key=lambda x: x.price)
+        cheapest_non_foil = min(non_foil_offers, key=lambda x: x.price)
+        
+        # If foil is within $1 of non-foil, pick foil; otherwise pick non-foil
+        if cheapest_foil.price - cheapest_non_foil.price <= 1.00:
+            return cheapest_foil
+        else:
+            return cheapest_non_foil
+    
+    def get_name(self) -> str:
+        return "Foil if Within $1"
+
+
 # Registry of available strategies (will be instantiated with min_quality in get_strategy)
 AVAILABLE_STRATEGIES = {
     "cheapest": CheapestStrategy,
@@ -295,6 +417,8 @@ AVAILABLE_STRATEGIES = {
     "blingiest": BlingiestStrategy,
     "best-condition": BestConditionStrategy,
     "foil-first-cheapest": FoilFirstCheapestStrategy,
+    "foil-within-50cents": FoilWithin50CentsStrategy,
+    "foil-within-1dollar": FoilWithin1DollarStrategy,
 }
 
 

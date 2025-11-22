@@ -118,6 +118,8 @@ The tool supports multiple strategies for selecting the best card offer:
 - **cheapest-nonfoil**: Selects the cheapest non-foil version
 - **cheapest-foil**: Selects the cheapest foil version
 - **foil-first-cheapest**: Prefers foil cards - selects the cheapest foil if available, otherwise falls back to the cheapest non-foil
+- **foil-within-50cents**: Selects foil if the price difference between the cheapest foil and cheapest non-foil is within 50 cents, otherwise selects non-foil
+- **foil-within-1dollar**: Selects foil if the price difference between the cheapest foil and cheapest non-foil is within $1, otherwise selects non-foil
 - **best-condition**: Selects the cheapest Near Mint condition card
 - **blingiest**: Selects the most expensive foil card (for "bling" factor)
 
@@ -273,6 +275,8 @@ The tool supports multiple strategies for selecting the best offer from availabl
 - **CheapestFoilStrategy**: Select the cheapest foil version
 - **CheapestNonFoilStrategy**: Select the cheapest non-foil version
 - **FoilFirstCheapestStrategy**: Prefer foil cards - select the cheapest foil if available, otherwise the cheapest non-foil
+- **FoilWithin50CentsStrategy**: Select foil if the price difference is within 50 cents of the cheapest non-foil
+- **FoilWithin1DollarStrategy**: Select foil if the price difference is within $1 of the cheapest non-foil
 - **BestConditionStrategy**: Select the cheapest Near Mint condition card
 - **BlingiestStrategy**: Select the most expensive foil card
 
