@@ -240,7 +240,7 @@ class TopDeckJolietteScraper(StoreScraper):
             An Offer object, or None if the variant is not valid
         """
         # Check if variant is in stock
-        is_available = "in-stock" in variant.get("class", [])
+        is_available = not "no-stock" in variant.get("class", [])
 
         # Extract variant description (condition, language)
         # Try 'variant-description' first, fall back to 'variant-short-info'
