@@ -291,11 +291,17 @@ class FoilWithin50CentsStrategy(SelectionStrategy):
     """
     Strategy that picks foil if the price difference between the cheapest foil
     and the cheapest non-foil is within 50 cents. Otherwise, picks the non-foil.
+    
+    Note: If the foil is cheaper than the non-foil, the foil will always be selected.
     """
     
     def select(self, offers: List[Offer]) -> Optional[Offer]:
         """
         Select foil if within 50 cents of non-foil price, otherwise select non-foil.
+        
+        The strategy compares the cheapest foil to the cheapest non-foil. If the foil
+        costs 50 cents or less more than the non-foil (or is actually cheaper), the
+        foil is selected. Otherwise, the non-foil is selected.
         
         Args:
             offers: A list of Offer objects
@@ -346,11 +352,17 @@ class FoilWithin1DollarStrategy(SelectionStrategy):
     """
     Strategy that picks foil if the price difference between the cheapest foil
     and the cheapest non-foil is within $1. Otherwise, picks the non-foil.
+    
+    Note: If the foil is cheaper than the non-foil, the foil will always be selected.
     """
     
     def select(self, offers: List[Offer]) -> Optional[Offer]:
         """
         Select foil if within $1 of non-foil price, otherwise select non-foil.
+        
+        The strategy compares the cheapest foil to the cheapest non-foil. If the foil
+        costs $1 or less more than the non-foil (or is actually cheaper), the foil is
+        selected. Otherwise, the non-foil is selected.
         
         Args:
             offers: A list of Offer objects
