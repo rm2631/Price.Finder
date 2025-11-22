@@ -154,6 +154,8 @@ def main():
         "cheapest-foil": "Cheapest Foil",
         "cheapest-nonfoil": "Cheapest Non-Foil",
         "foil-first-cheapest": "Foil First (prefer foil, fallback to non-foil)",
+        "foil-within-50cents": "Foil if Within 50 Cents (pick foil if price difference ≤ $0.50)",
+        "foil-within-1dollar": "Foil if Within $1 (pick foil if price difference ≤ $1.00)",
         # "best-condition": "Best Condition (cheapest Near Mint)",
         # "blingiest": "Blingiest (most expensive foil)"
     }
